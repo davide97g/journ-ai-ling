@@ -1,11 +1,13 @@
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { createClient } from "@/lib/supabase/server";
 import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  console.log("[Chat API] Starting chat request");
+
   const supabase = await createClient();
 
   // Check authentication
@@ -13,27 +15,39 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
+    console.log("[Chat API] Unauthorized request - no user");
     return new Response("Unauthorized", { status: 401 });
   }
 
   const body = await req.json();
-  const {
-    messages,
+  const { messages }: { messages: UIMessage[] } = body;
+  const { sessionId, currentQuestionIndex, modelProvider = "openai" } = body;
+
+  console.log("[Chat API] Request details:", {
     sessionId,
     currentQuestionIndex,
-    modelProvider = "openai",
-  } = body;
+    modelProvider,
+    messageCount: messages?.length || 0,
+    userId: user.id,
+  });
 
   // Get the current question
   const currentQuestion = JOURNAL_QUESTIONS[currentQuestionIndex];
+  console.log("[Chat API] Current question:", {
+    index: currentQuestionIndex,
+    question: currentQuestion.question,
+  });
 
   // Unified model configuration - easily extensible for future providers
   const getModel = (provider: string) => {
+    console.log("[Chat API] Getting model for provider:", provider);
     switch (provider) {
       case "openai":
         if (!process.env.OPENAI_API_KEY) {
+          console.error("[Chat API] OpenAI API key not configured");
           throw new Error("OpenAI API key not configured");
         }
+        console.log("[Chat API] Using OpenAI model: gpt-4o-mini");
         return openai("gpt-4o-mini");
 
       // Future providers can be added here:
@@ -43,6 +57,7 @@ export async function POST(req: Request) {
       //   return google("gemini-1.5-pro");
 
       default:
+        console.error("[Chat API] Unsupported model provider:", provider);
         throw new Error(`Unsupported model provider: ${provider}`);
     }
   };
@@ -63,15 +78,19 @@ Guidelines:
   try {
     const model = getModel(modelProvider);
 
+    console.log("[Chat API] Starting streamText generation");
     const result = streamText({
       model,
       system: systemPrompt,
-      messages: messages || [],
+      messages: convertToModelMessages(messages),
     });
 
+    console.log(
+      "[Chat API] StreamText created, returning UI message stream response"
+    );
     return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error("[v0] Model configuration error:", error);
+    console.error("[Chat API] Model configuration error:", error);
     return new Response(
       `Model configuration error: ${
         error instanceof Error ? error.message : "Unknown error"
