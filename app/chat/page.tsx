@@ -5,12 +5,23 @@ import type React from "react";
 import AIBotBlobs from "@/components/ai-blob";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { ChatMessage } from "@/components/chat-message";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { ArrowRight, BookOpen, History, Send } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, History, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -43,10 +54,36 @@ export default function ChatPage() {
   }, [input]);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+  const [isStartingNewSession, setIsStartingNewSession] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const [hintMessage, setHintMessage] = useState("");
+  const [userInitials, setUserInitials] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Fetch user data and generate initials
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch("/api/auth/user");
+      if (response.ok) {
+        const userData = await response.json();
+        if (userData.user?.email) {
+          const email = userData.user.email;
+          const initials = email
+            .split("@")[0]
+            .split(".")
+            .map((part: string) => part.charAt(0).toUpperCase())
+            .join("")
+            .slice(0, 2);
+          setUserInitials(initials);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+      setUserInitials("U");
+    }
+  };
 
   // Array of therapist-like hint messages
   const hintMessages = [
@@ -79,6 +116,9 @@ export default function ChatPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionIdFromUrl = urlParams.get("id");
+
+    // Fetch user data
+    fetchUserData();
 
     if (sessionIdFromUrl) {
       loadExistingSession(sessionIdFromUrl);
@@ -302,6 +342,7 @@ export default function ChatPage() {
   const handleDeleteSession = async () => {
     if (!sessionId) return;
 
+    setIsDeletingSession(true);
     try {
       const response = await fetch(`/api/journal/session/${sessionId}`, {
         method: "DELETE",
@@ -330,24 +371,31 @@ export default function ChatPage() {
       window.location.href = "/chat";
     } catch (error) {
       console.error("Failed to delete session:", error);
+    } finally {
+      setIsDeletingSession(false);
     }
   };
 
-  const handleStartNewSession = () => {
-    // Reset all state and redirect to new chat
-    setSessionId(null);
-    setCurrentQuestionIndex(0);
-    setIsComplete(false);
-    setInput("");
-    setCurrentAudioUrl("");
-    setLocalMessages([]);
-    const randomMessage =
-      hintMessages[Math.floor(Math.random() * hintMessages.length)];
-    setHintMessage(randomMessage);
-    setShowHint(true);
+  const handleStartNewSession = async () => {
+    setIsStartingNewSession(true);
+    try {
+      // Reset all state and redirect to new chat
+      setSessionId(null);
+      setCurrentQuestionIndex(0);
+      setIsComplete(false);
+      setInput("");
+      setCurrentAudioUrl("");
+      setLocalMessages([]);
+      const randomMessage =
+        hintMessages[Math.floor(Math.random() * hintMessages.length)];
+      setHintMessage(randomMessage);
+      setShowHint(true);
 
-    // Use full page refresh to ensure clean state
-    window.location.href = "/chat";
+      // Use full page refresh to ensure clean state
+      window.location.href = "/chat";
+    } finally {
+      setIsStartingNewSession(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -390,17 +438,65 @@ export default function ChatPage() {
           </span>
           {sessionId && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeleteSession}
-                className="text-destructive hover:text-destructive"
-              >
-                Delete session
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleStartNewSession}>
-                New session
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isDeletingSession || isStartingNewSession}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {isDeletingSession ? "Deleting..." : "Delete session"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Session</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this journal session? This
+                      action cannot be undone and all your messages will be
+                      permanently lost.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteSession}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {isDeletingSession ? "Deleting..." : "Delete"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isDeletingSession || isStartingNewSession}
+                  >
+                    {isStartingNewSession ? "Starting..." : "New session"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start New Session</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to start a new journal session? Your
+                      current session will be saved and you'll begin with a
+                      fresh conversation.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleStartNewSession}>
+                      {isStartingNewSession ? "Starting..." : "Start New"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
           <Button variant="ghost" size="icon" asChild>
@@ -446,6 +542,7 @@ export default function ChatPage() {
               key={message.id}
               role={message.role}
               content={message.content}
+              userInitials={userInitials}
             />
           ))}
           {/* Display useChat messages */}
@@ -456,13 +553,14 @@ export default function ChatPage() {
               content={message.parts
                 .map((part) => (part.type === "text" ? part.text : ""))
                 .join("")}
+              userInitials={userInitials}
             />
           ))}
           {isLoading && (
             <div className="px-4 py-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  C
+                  <Bot className="h-4 w-4" />
                 </div>
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-1">
