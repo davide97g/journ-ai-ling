@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "journ-ai-ling",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.42",
     "@aws-sdk/client-rds-data": "latest",
     "@cloudflare/workers-types": "latest",
     "@electric-sql/pglite": "latest",
@@ -76,6 +77,7 @@
     "mysql2": "latest",
     "next": "15.2.4",
     "next-themes": "^0.4.6",
+    "ollama": "^0.6.0",
     "pg": "latest",
     "postgres": "latest",
     "react": "^19",

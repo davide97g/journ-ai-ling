@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const MOCK_MODE = true; // Set to false when backend is ready
+const MOCK_MODE = false; // Set to false when backend is ready
 
 export default function ChatPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -110,6 +110,34 @@ export default function ChatPage() {
     return responses[questionIndex % responses.length];
   };
 
+  const saveMessage = async (message: {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+  }) => {
+    if (MOCK_MODE) {
+      console.log("[v0] Mock saving message:", message);
+    } else {
+      try {
+        const response = await fetch("/api/journal/message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            message,
+            currentQuestionIndex,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save message");
+        }
+      } catch (error) {
+        console.error("[v0] Failed to save message:", error);
+      }
+    }
+  };
+
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isTyping) return;
 
@@ -120,6 +148,9 @@ export default function ChatPage() {
       content: text,
     };
     setMessages((prev) => [...prev, userMessage]);
+
+    // Save user message immediately
+    await saveMessage(userMessage);
 
     if (MOCK_MODE) {
       // Mock AI response with typing effect
@@ -133,6 +164,9 @@ export default function ChatPage() {
         content: aiResponse,
       };
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Save assistant message immediately
+      await saveMessage(assistantMessage);
       setIsTyping(false);
     } else {
       // Real AI API call would go here
@@ -159,6 +193,9 @@ export default function ChatPage() {
           content: data.message,
         };
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // Save assistant message immediately
+        await saveMessage(assistantMessage);
         setIsTyping(false);
       } catch (error) {
         console.error("[v0] Failed to get AI response:", error);
@@ -170,6 +207,9 @@ export default function ChatPage() {
           content: aiResponse,
         };
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // Save assistant message immediately
+        await saveMessage(assistantMessage);
         setIsTyping(false);
       }
     }
@@ -200,18 +240,7 @@ export default function ChatPage() {
       setSkipAttempts(0);
     }
 
-    // Save current answer if there's input
-    if (input.trim() || lastAnswer) {
-      setEntries([
-        ...entries,
-        {
-          questionKey: JOURNAL_QUESTIONS[currentQuestionIndex].key,
-          question: JOURNAL_QUESTIONS[currentQuestionIndex].question,
-          answer: input.trim() || lastAnswer,
-          audioUrl: currentAudioUrl || undefined,
-        },
-      ]);
-    }
+    // Don't save individual entries during conversation - save everything at the end
 
     setCurrentAudioUrl("");
     setInput("");
@@ -228,6 +257,9 @@ export default function ChatPage() {
         content: JOURNAL_QUESTIONS[nextIndex].question,
       };
       setMessages((prev) => [...prev, nextQuestion]);
+
+      // Save next question message immediately
+      await saveMessage(nextQuestion);
     } else {
       handleComplete();
     }
@@ -236,23 +268,10 @@ export default function ChatPage() {
   const handleComplete = async () => {
     setIsSaving(true);
 
-    const userMessages = messages.filter((m) => m.role === "user");
-    const lastMessage = userMessages[userMessages.length - 1];
-    const lastAnswer = lastMessage?.content || "";
-
-    const finalEntries = [
-      ...entries,
-      {
-        questionKey: JOURNAL_QUESTIONS[currentQuestionIndex].key,
-        question: JOURNAL_QUESTIONS[currentQuestionIndex].question,
-        answer: lastAnswer,
-        audioUrl: currentAudioUrl || undefined,
-      },
-    ];
-
+    // Mark session as complete - all messages already saved individually
     if (MOCK_MODE) {
-      // Mock save
-      console.log("[v0] Mock saving journal entries:", finalEntries);
+      // Mock completion
+      console.log("[v0] Mock marking session as complete");
       await new Promise((resolve) => setTimeout(resolve, 500));
     } else {
       try {
@@ -261,16 +280,16 @@ export default function ChatPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId,
-            entries: finalEntries,
+            entries: [], // No entries to save, just mark as complete
             completed: JOURNAL_QUESTIONS.length,
           }),
         });
 
         if (!response.ok) {
-          throw new Error("Failed to save journal");
+          throw new Error("Failed to mark session as complete");
         }
       } catch (error) {
-        console.error("[v0] Failed to save journal:", error);
+        console.error("[v0] Failed to mark session as complete:", error);
         // Continue anyway in mock mode
       }
     }
@@ -285,6 +304,9 @@ export default function ChatPage() {
         "Thank you for sharing your day with me. Your journal entry has been saved. Take care, and I'll see you tomorrow!",
     };
     setMessages((prev) => [...prev, completionMessage]);
+
+    // Save completion message immediately
+    await saveMessage(completionMessage);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
