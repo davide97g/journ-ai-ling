@@ -1,36 +1,36 @@
 export const JOURNAL_QUESTIONS = [
   {
     key: "mood",
-    question: "How are you feeling today? What's your overall mood?",
+    question: "Come ti senti oggi? Qual è il tuo umore generale?",
   },
   {
     key: "stress",
-    question: "What's your stress level today? What's contributing to it?",
+    question: "Qual è il tuo livello di stress oggi? Cosa lo sta contribuendo?",
   },
   {
     key: "activity",
-    question: "What physical activities did you do today?",
+    question: "Che attività fisiche hai fatto oggi?",
   },
   {
     key: "diet",
-    question: "How was your eating today? What did you have?",
+    question: "Come è andata la tua alimentazione oggi? Cosa hai mangiato?",
   },
   {
     key: "leisure",
-    question: "What did you do for fun or relaxation today?",
+    question: "Cosa hai fatto per divertimento o relax oggi?",
   },
   {
     key: "relationships",
-    question: "How were your interactions with others today?",
+    question: "Come sono state le tue interazioni con gli altri oggi?",
   },
   {
     key: "work",
-    question: "How was your work or productivity today?",
+    question: "Come è andato il tuo lavoro o la tua produttività oggi?",
   },
   {
     key: "other",
-    question: "Is there anything else you'd like to share about your day?",
+    question: "C'è qualcos'altro che vorresti condividere sulla tua giornata?",
   },
-] as const
+] as const;
 
-export type QuestionKey = (typeof JOURNAL_QUESTIONS)[number]["key"]
+export type QuestionKey = (typeof JOURNAL_QUESTIONS)[number]["key"];

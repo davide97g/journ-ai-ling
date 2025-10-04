@@ -9,7 +9,14 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
-import { Calendar, CheckCircle2, Headphones, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  CheckCircle2,
+  Headphones,
+  MessageSquare,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
 
 interface JournalCardProps {
   session: {
@@ -115,6 +122,14 @@ export function JournalCard({
               {session.entries.length - 2 === 1 ? "entry" : "entries"}
             </p>
           )}
+        </div>
+        <div className="mt-4 flex gap-2">
+          <Button asChild variant="outline" size="sm" className="flex-1">
+            <Link href={`/chat?id=${session.id}`}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Vedi Dettagli
+            </Link>
+          </Button>
         </div>
       </CardContent>
     </Card>

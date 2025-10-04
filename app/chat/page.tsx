@@ -18,11 +18,27 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { ArrowRight, BookOpen, Bot, History, Send } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  History,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -60,6 +76,7 @@ export default function ChatPage() {
   const [showHint, setShowHint] = useState(true);
   const [hintMessage, setHintMessage] = useState("");
   const [userInitials, setUserInitials] = useState<string>("");
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -179,6 +196,12 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, localMessages]);
+
+  useEffect(() => {
+    if (isComplete) {
+      setShowCompletionModal(true);
+    }
+  }, [isComplete]);
 
   // Save message to database
   const saveMessage = async (message: {
@@ -324,16 +347,6 @@ export default function ChatPage() {
 
     setIsComplete(true);
     setIsSaving(false);
-
-    // Send completion message
-    sendMessage({
-      parts: [
-        {
-          type: "text",
-          text: "Thank you for sharing your day with me. Your journal entry has been saved. Take care, and I'll see you tomorrow!",
-        },
-      ],
-    });
   };
 
   const handleDeleteSession = async () => {
@@ -430,9 +443,14 @@ export default function ChatPage() {
           <h1 className="font-semibold">Daily Journal</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Question {currentQuestionIndex + 1} of {JOURNAL_QUESTIONS.length}
-          </span>
+          {!isComplete && (
+            <span className="text-sm text-muted-foreground">
+              Question {currentQuestionIndex + 1} of {JOURNAL_QUESTIONS.length}
+            </span>
+          )}
+          {isComplete && (
+            <span className="text-sm text-muted-foreground">Completato</span>
+          )}
           {sessionId && (
             <>
               <AlertDialog>
@@ -443,7 +461,11 @@ export default function ChatPage() {
                     disabled={isDeletingSession || isStartingNewSession}
                     className="text-destructive hover:text-destructive"
                   >
-                    {isDeletingSession ? "Deleting..." : "Delete session"}
+                    {isDeletingSession ? (
+                      <Spinner className="h-4 w-4" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -474,7 +496,11 @@ export default function ChatPage() {
                     size="sm"
                     disabled={isDeletingSession || isStartingNewSession}
                   >
-                    {isStartingNewSession ? "Starting..." : "New session"}
+                    {isStartingNewSession ? (
+                      <Spinner className="h-4 w-4" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -564,7 +590,7 @@ export default function ChatPage() {
               userInitials={userInitials}
             />
           ))}
-          {isLoading && (
+          {/* {isLoading && (
             <div className="px-4 py-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -579,7 +605,7 @@ export default function ChatPage() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -652,6 +678,39 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      {/* Completion Modal */}
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Diario Completato</DialogTitle>
+            <DialogDescription className="text-center">
+              Il tuo diario per{" "}
+              {new Date().toLocaleDateString("it-IT", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}{" "}
+              è stato salvato in modo sicuro nel sistema.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row items-center justify-center">
+            <Button onClick={() => router.push("/history")}>
+              Vedi nella Cronologia
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCompletionModal(false);
+                window.location.href = "/chat";
+              }}
+            >
+              Nuovo Diario
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
