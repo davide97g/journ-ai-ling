@@ -2,6 +2,7 @@
 
 import type React from "react";
 
+import AIBotBlobs from "@/components/ai-blob";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { ChatMessage } from "@/components/chat-message";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,25 @@ export default function ChatPage() {
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<
     Array<{ id: string; role: "user" | "assistant"; content: string }>
   >([]);
+
+  // Typing detection with debounce
+  useEffect(() => {
+    if (input.length === 0) {
+      setIsTyping(false);
+      return;
+    }
+
+    setIsTyping(true);
+    const timeoutId = setTimeout(() => {
+      setIsTyping(false);
+    }, 2000); // Increased to 2s to allow full transition
+
+    return () => clearTimeout(timeoutId);
+  }, [input]);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [showHint, setShowHint] = useState(true);
@@ -395,13 +412,30 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl">
+      <div className="flex-1 overflow-y-auto relative">
+        {/* Background blob when not typing */}
+
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <AIBotBlobs
+              size={!isTyping ? 600 : 300}
+              animated={true}
+              randomColors={true}
+              colorChangeInterval={4000}
+              isTyping={!isTyping}
+              className="opacity-20"
+            />
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-3xl relative z-10">
           {/* Show hint message when no messages and no session */}
           {showHint && localMessages.length === 0 && messages.length === 0 && (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg">{hintMessage}</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 relative">
+              <div className="text-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-8 py-6 shadow-lg">
+                <p className="text-lg text-white/90 font-medium">
+                  {hintMessage}
+                </p>
               </div>
             </div>
           )}

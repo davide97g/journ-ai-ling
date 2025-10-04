@@ -1,172 +1,231 @@
 // AI-Bot-Blobs.tsx
-// Minimal, shadcn-flavored React component showing cool animated blobs behind an avatar.
-// Tailwind classes are used for layout and spacing. The component is intentionally small
-// and easy to drop into a dashboard or profile card.
+// Animated gradient blob component with smooth warp animation
+
+import { useEffect, useState } from "react";
+
+type GradientColor = {
+  color: string;
+  stop: number; // 0-100
+  opacity?: number; // 0-1
+};
 
 type Props = {
-  size?: number; // avatar size in px
-  label?: string; // accessible label or name
-  primaryColor?: string; // hex color for main blob (e.g. #7c3aed)
-  secondaryColor?: string; // hex color for second blob (e.g. #06b6d4)
+  size?: number; // blob size in px
   animated?: boolean;
   className?: string;
+  colors?: GradientColor[]; // Array of gradient colors
+  colorChangeInterval?: number; // milliseconds between color changes
+  randomColors?: boolean; // enable random color generation
+  isTyping?: boolean; // trigger glassmorphism effect when typing
 };
 
 export default function AIBotBlobs({
-  size = 88,
-  label = "AI Bot",
-  primaryColor = "#7c3aed",
-  secondaryColor = "#06b6d4",
+  size = 300,
   animated = true,
   className = "",
+  colors = [
+    { color: "#2ef5cd", stop: 0, opacity: 1 },
+    { color: "#4c6ecf", stop: 44, opacity: 1 },
+    { color: "#6567ce", stop: 60, opacity: 1 },
+    { color: "#fa99c7", stop: 100, opacity: 1 },
+  ],
+  colorChangeInterval = 3000, // 3 seconds
+  randomColors = false,
+  isTyping = false,
 }: Props) {
-  const blobSize = Math.max(Math.round(size * 2.2), 140);
-  const svgStyle = { width: blobSize, height: blobSize };
+  const [currentPaletteIndex, setCurrentPaletteIndex] = useState(0);
+
+  // Predefined color palettes
+  const colorPalettes = [
+    // Palette 1: Original (Teal to Pink)
+    [
+      { color: "#2ef5cd", stop: 0, opacity: 1 },
+      { color: "#4c6ecf", stop: 44, opacity: 1 },
+      { color: "#6567ce", stop: 60, opacity: 1 },
+      { color: "#fa99c7", stop: 100, opacity: 1 },
+    ],
+    // Palette 2: Purple to Orange
+    [
+      { color: "#8b5cf6", stop: 0, opacity: 1 },
+      { color: "#a855f7", stop: 33, opacity: 1 },
+      { color: "#f97316", stop: 66, opacity: 1 },
+      { color: "#f59e0b", stop: 100, opacity: 1 },
+    ],
+    // Palette 3: Blue to Green
+    [
+      { color: "#3b82f6", stop: 0, opacity: 1 },
+      { color: "#06b6d4", stop: 33, opacity: 1 },
+      { color: "#10b981", stop: 66, opacity: 1 },
+      { color: "#22c55e", stop: 100, opacity: 1 },
+    ],
+  ];
+
+  // Select next random palette
+  const getNextPalette = (): number => {
+    let nextIndex;
+    do {
+      nextIndex = Math.floor(Math.random() * colorPalettes.length);
+    } while (nextIndex === currentPaletteIndex && colorPalettes.length > 1);
+    return nextIndex;
+  };
+
+  // Color cycling effect
+  useEffect(() => {
+    if (!randomColors) return;
+
+    const interval = setInterval(() => {
+      setCurrentPaletteIndex(getNextPalette());
+    }, colorChangeInterval);
+
+    return () => clearInterval(interval);
+  }, [randomColors, colorChangeInterval, currentPaletteIndex]);
+
+  // Use current colors or provided colors
+  const activeColors = randomColors
+    ? colorPalettes[currentPaletteIndex]
+    : colors;
+  // Generate gradient CSS from colors array
+  const generateGradient = (colors: GradientColor[], angle: number = 45) => {
+    const stops = colors
+      .map(({ color, stop, opacity = 1 }) => {
+        // Handle both hex and hsl colors
+        if (color.startsWith("hsl(")) {
+          return `${color} ${stop}%`;
+        } else {
+          const rgb = hexToRgb(color);
+          return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity}) ${stop}%`;
+        }
+      })
+      .join(", ");
+    return `linear-gradient(${angle}deg, ${stops})`;
+  };
+
+  // Convert hex to RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : { r: 0, g: 0, b: 0 };
+  };
+
+  // Create multiple gradient layers for depth
+  const primaryGradient = generateGradient(activeColors, 45);
+  const secondaryGradient = generateGradient(
+    activeColors.map((c, i) => ({
+      ...c,
+      opacity: (c.opacity || 1) * 0.3,
+      stop: c.stop + (i % 2 === 0 ? 10 : -10),
+    })),
+    80
+  );
+  const tertiaryGradient = generateGradient(
+    activeColors.map((c, i) => ({
+      ...c,
+      opacity: (c.opacity || 1) * 0.1,
+      stop: c.stop + (i % 2 === 0 ? -5 : 5),
+    })),
+    20
+  );
+
+  // Generate gradients for each palette
+  const generatePaletteGradient = (palette: GradientColor[]) => {
+    const primaryGradient = generateGradient(palette, 45);
+    const secondaryGradient = generateGradient(
+      palette.map((c, i) => ({
+        ...c,
+        opacity: (c.opacity || 1) * 0.3,
+        stop: c.stop + (i % 2 === 0 ? 10 : -10),
+      })),
+      80
+    );
+    const tertiaryGradient = generateGradient(
+      palette.map((c, i) => ({
+        ...c,
+        opacity: (c.opacity || 1) * 0.1,
+        stop: c.stop + (i % 2 === 0 ? -5 : 5),
+      })),
+      20
+    );
+    return `${primaryGradient}, ${secondaryGradient}, ${tertiaryGradient}`;
+  };
 
   return (
-    <div
-      className={`relative inline-flex items-center justify-center ${className}`}
-      aria-label={label}
-    >
-      {/* Blobs wrapper */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <svg
-          className="-z-10"
-          viewBox={`0 0 ${blobSize} ${blobSize}`}
-          style={svgStyle}
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-        >
-          <defs>
-            <linearGradient id="g1" x1="0%" x2="100%">
-              <stop offset="0%" stopColor={primaryColor} stopOpacity="0.95" />
-              <stop
-                offset="100%"
-                stopColor={secondaryColor}
-                stopOpacity="0.85"
-              />
-            </linearGradient>
-            <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="18" />
-            </filter>
-          </defs>
-
-          {/* Primary blob */}
-          <g
-            filter="url(#blur)"
-            transform={`translate(${blobSize * 0.02}, ${blobSize * 0.03})`}
-          >
-            <path
-              fill="url(#g1)"
-              d={`M${blobSize * 0.12},${blobSize * 0.32}
-                 C${blobSize * 0.02},${blobSize * 0.02} ${blobSize * 0.48},${
-                blobSize * 0.0
-              } ${blobSize * 0.68},${blobSize * 0.12}
-                 C${blobSize * 0.92},${blobSize * 0.26} ${blobSize * 0.98},${
-                blobSize * 0.62
-              } ${blobSize * 0.76},${blobSize * 0.78}
-                 C${blobSize * 0.54},${blobSize * 0.96} ${blobSize * 0.16},${
-                blobSize * 0.88
-              } ${blobSize * 0.06},${blobSize * 0.66}
-                 C${blobSize * 0.0},${blobSize * 0.52} ${blobSize * 0.22},${
-                blobSize * 0.4
-              } ${blobSize * 0.12},${blobSize * 0.32} Z`}
-              opacity="0.95"
-              className={animated ? "blob-anim-1" : ""}
-            />
-          </g>
-
-          {/* Secondary smaller blob */}
-          <g
-            filter="url(#blur)"
-            transform={`translate(${blobSize * 0.28}, ${blobSize * 0.48})`}
-          >
-            <path
-              fill={secondaryColor}
-              d={`M${blobSize * 0.1},${blobSize * 0.2}
-                 C${blobSize * 0.0},${blobSize * 0.06} ${blobSize * 0.28},${
-                blobSize * 0.0
-              } ${blobSize * 0.44},${blobSize * 0.08}
-                 C${blobSize * 0.62},${blobSize * 0.18} ${blobSize * 0.68},${
-                blobSize * 0.42
-              } ${blobSize * 0.52},${blobSize * 0.56}
-                 C${blobSize * 0.36},${blobSize * 0.72} ${blobSize * 0.06},${
-                blobSize * 0.62
-              } ${blobSize * 0.02},${blobSize * 0.44}
-                 C${blobSize * 0.0},${blobSize * 0.32} ${blobSize * 0.12},${
-                blobSize * 0.24
-              } ${blobSize * 0.1},${blobSize * 0.2} Z`}
-              opacity="0.9"
-              className={animated ? "blob-anim-2" : ""}
-            />
-          </g>
-        </svg>
-      </div>
-
-      {/* Minimal shadcn-style avatar */}
-      <div
-        className={`relative flex items-center justify-center rounded-2xl shadow-md overflow-hidden bg-white/70 backdrop-blur-sm`}
-      >
-        <div
-          style={{ width: size, height: size }}
-          className="flex items-center justify-center rounded-lg"
-        >
-          {/* Simple avatar circle with initials */}
+    <>
+      {/* Render 3 blobs, one for each palette */}
+      {randomColors ? (
+        colorPalettes.map((palette, index) => (
           <div
-            className="flex items-center justify-center rounded-full font-medium"
+            key={index}
+            className={`warp-blob ${isTyping ? "typing" : ""} ${className}`}
             style={{
-              width: Math.round(size * 0.9),
-              height: Math.round(size * 0.9),
-              background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-              color: "white",
-              boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+              width: size,
+              height: size,
+              background: generatePaletteGradient(palette),
+              backgroundColor: "#fa709a", // Fallback color
+              opacity: index === currentPaletteIndex ? 1 : 0,
             }}
-            aria-hidden={false}
-          >
-            <span style={{ fontSize: Math.round(size * 0.32) }}>
-              {label
-                .split(" ")
-                .map((n) => n[0])
-                .slice(0, 2)
-                .join("")}
-            </span>
-          </div>
-        </div>
-      </div>
+          />
+        ))
+      ) : (
+        <div
+          className={`warp-blob ${isTyping ? "typing" : ""} ${className}`}
+          style={{
+            width: size,
+            height: size,
+            background: generatePaletteGradient(activeColors),
+            backgroundColor: "#fa709a", // Fallback color
+          }}
+        />
+      )}
 
-      {/* Inline styles for tiny, purpose-driven animations — minimal and easy to adapt. */}
-      <style>{`
-        @keyframes float-1 {
-          0% { transform: translateY(0) rotate(0deg) scale(1); }
-          50% { transform: translateY(-6px) rotate(6deg) scale(1.02); }
-          100% { transform: translateY(0) rotate(0deg) scale(1); }
+      {/* Core component styles */}
+      <style jsx>{`
+        .warp-blob {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          border-radius: 100%;
+          box-shadow: 0 15px 55px 20px rgba(0, 0, 0, 0.1);
+          animation: ${animated ? "warp 10s infinite" : "none"};
+          transition: 1s cubic-bezier(0.07, 0.8, 0.16, 1),
+            opacity 2s ease-in-out, width 1s cubic-bezier(0.4, 0, 0.2, 1),
+            height 1s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 1;
         }
-        @keyframes float-2 {
-          0% { transform: translate(0,0) rotate(0deg) scale(1); }
-          50% { transform: translate(8px,-4px) rotate(-5deg) scale(1.01); }
-          100% { transform: translate(0,0) rotate(0deg) scale(1); }
+
+        .warp-blob.typing {
+          width: ${size + 20}px;
+          height: ${size + 20}px;
+          filter: blur(30px);
+          transition: 1s cubic-bezier(0.07, 0.8, 0.16, 1),
+            opacity 2s ease-in-out, width 1s cubic-bezier(0.4, 0, 0.2, 1),
+            height 1s cubic-bezier(0.4, 0, 0.2, 1), filter 1.5s ease-in-out,
+            box-shadow 1.5s ease-in-out;
         }
-        .blob-anim-1 { animation: float-1 6.5s ease-in-out infinite; transform-origin: 50% 50%; }
-        .blob-anim-2 { animation: float-2 8.2s ease-in-out infinite; transform-origin: 50% 50%; }
+
+        @keyframes warp {
+          0% {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          25% {
+            transform: translate(-50%, -50%) rotate(15deg);
+          }
+          50% {
+            transform: translate(-50%, -50%) rotate(-5deg);
+          }
+          75% {
+            transform: translate(-50%, -50%) rotate(15deg);
+          }
+          100% {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+        }
       `}</style>
-    </div>
+    </>
   );
 }
-
-/*
-Usage examples (drop into a page):
-
-<AIBotBlobs size={96} label="Aurora" primaryColor="#8b5cf6" secondaryColor="#06b6d4" />
-
-Or inside a shadcn Card:
-
-<Card className="p-4 w-64">
-  <CardContent className="flex items-center gap-4">
-    <AIBotBlobs size={72} label="ECHO" primaryColor="#ef4444" secondaryColor="#f97316" />
-    <div>
-      <h4 className="text-sm font-semibold">Echo — Assistant</h4>
-      <p className="text-xs text-muted-foreground">Context-aware helper</p>
-    </div>
-  </CardContent>
-</Card>
-*/
