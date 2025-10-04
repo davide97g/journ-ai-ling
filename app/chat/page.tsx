@@ -1,89 +1,101 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { ChatMessage } from "@/components/chat-message"
-import { AudioRecorder } from "@/components/audio-recorder"
-import { JOURNAL_QUESTIONS } from "@/lib/journal-questions"
-import { Send, ArrowRight, BookOpen, History } from "lucide-react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { AudioRecorder } from "@/components/audio-recorder";
+import { ChatMessage } from "@/components/chat-message";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
+import { ArrowRight, BookOpen, History, Send } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-const MOCK_MODE = true // Set to false when backend is ready
+const MOCK_MODE = true; // Set to false when backend is ready
 
 export default function ChatPage() {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [entries, setEntries] = useState<
-    Array<{ questionKey: string; question: string; answer: string; audioUrl?: string }>
-  >([])
-  const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("")
-  const [isComplete, setIsComplete] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<Array<{ id: string; role: "user" | "assistant"; content: string }>>([])
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+    Array<{
+      questionKey: string;
+      question: string;
+      answer: string;
+      audioUrl?: string;
+    }>
+  >([]);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("");
+  const [isComplete, setIsComplete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<
+    Array<{ id: string; role: "user" | "assistant"; content: string }>
+  >([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
+  const [skipAttempts, setSkipAttempts] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function createSession() {
       if (MOCK_MODE) {
         // Mock session creation
-        const mockSessionId = `mock-session-${Date.now()}`
-        setSessionId(mockSessionId)
+        const mockSessionId = `mock-session-${Date.now()}`;
+        setSessionId(mockSessionId);
         setMessages([
           {
             id: "1",
             role: "assistant",
             content: `Hi! I'm Collector, your journaling companion. I'm here to help you reflect on your day. ${JOURNAL_QUESTIONS[0].question}`,
           },
-        ])
+        ]);
       } else {
         try {
           const response = await fetch("/api/journal/session", {
             method: "POST",
-          })
+          });
 
           if (!response.ok) {
-            throw new Error("Failed to create session")
+            throw new Error("Failed to create session");
           }
 
-          const data = await response.json()
-          setSessionId(data.session.id)
+          const data = await response.json();
+          setSessionId(data.session.id);
           setMessages([
             {
               id: "1",
               role: "assistant",
               content: `Hi! I'm Collector, your journaling companion. I'm here to help you reflect on your day. ${JOURNAL_QUESTIONS[0].question}`,
             },
-          ])
+          ]);
         } catch (error) {
-          console.error("[v0] Failed to create session:", error)
+          console.error("[v0] Failed to create session:", error);
           // Fallback to mock mode
-          const mockSessionId = `mock-session-${Date.now()}`
-          setSessionId(mockSessionId)
+          const mockSessionId = `mock-session-${Date.now()}`;
+          setSessionId(mockSessionId);
           setMessages([
             {
               id: "1",
               role: "assistant",
               content: `Hi! I'm Collector, your journaling companion. I'm here to help you reflect on your day. ${JOURNAL_QUESTIONS[0].question}`,
             },
-          ])
+          ]);
         }
       }
     }
-    createSession()
-  }, [])
+    createSession();
+  }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const generateMockResponse = (userInput: string, questionIndex: number): string => {
+  const generateMockResponse = (
+    userInput: string,
+    questionIndex: number
+  ): string => {
     const responses = [
       "Thank you for sharing that. It's important to acknowledge how you're feeling.",
       "I appreciate you opening up about this. Your feelings are valid.",
@@ -93,39 +105,39 @@ export default function ChatPage() {
       "That's a meaningful observation. How does that make you feel?",
       "I understand. It's helpful to recognize these patterns in our lives.",
       "Thank you for sharing. Your perspective is valuable.",
-    ]
+    ];
 
-    return responses[questionIndex % responses.length]
-  }
+    return responses[questionIndex % responses.length];
+  };
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() || isTyping) return
+    if (!text.trim() || isTyping) return;
 
     // Add user message
     const userMessage = {
       id: `user-${Date.now()}`,
       role: "user" as const,
       content: text,
-    }
-    setMessages((prev) => [...prev, userMessage])
+    };
+    setMessages((prev) => [...prev, userMessage]);
 
     if (MOCK_MODE) {
       // Mock AI response with typing effect
-      setIsTyping(true)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setIsTyping(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const aiResponse = generateMockResponse(text, currentQuestionIndex)
+      const aiResponse = generateMockResponse(text, currentQuestionIndex);
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant" as const,
         content: aiResponse,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsTyping(false)
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setIsTyping(false);
     } else {
       // Real AI API call would go here
       try {
-        setIsTyping(true)
+        setIsTyping(true);
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -134,74 +146,99 @@ export default function ChatPage() {
             sessionId,
             currentQuestionIndex,
           }),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to get AI response")
+          throw new Error("Failed to get AI response");
         }
 
-        const data = await response.json()
+        const data = await response.json();
         const assistantMessage = {
           id: `assistant-${Date.now()}`,
           role: "assistant" as const,
           content: data.message,
-        }
-        setMessages((prev) => [...prev, assistantMessage])
-        setIsTyping(false)
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
       } catch (error) {
-        console.error("[v0] Failed to get AI response:", error)
+        console.error("[v0] Failed to get AI response:", error);
         // Fallback to mock response
-        const aiResponse = generateMockResponse(text, currentQuestionIndex)
+        const aiResponse = generateMockResponse(text, currentQuestionIndex);
         const assistantMessage = {
           id: `assistant-${Date.now()}`,
           role: "assistant" as const,
           content: aiResponse,
-        }
-        setMessages((prev) => [...prev, assistantMessage])
-        setIsTyping(false)
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
       }
     }
-  }
+  };
 
   const handleNextQuestion = async () => {
-    if (currentQuestionIndex < JOURNAL_QUESTIONS.length - 1) {
-      const userMessages = messages.filter((m) => m.role === "user")
-      const lastMessage = userMessages[userMessages.length - 1]
-      const lastAnswer = lastMessage?.content || ""
+    // Check if current question has been answered
+    const hasAnswer = hasAnswerForCurrentQuestion();
+    const userMessages = messages.filter((m) => m.role === "user");
+    const lastMessage = userMessages[userMessages.length - 1];
+    const lastAnswer = lastMessage?.content || "";
 
+    // If no answer exists and no current input, implement two-click logic
+    if (!hasAnswer && !input.trim()) {
+      if (skipAttempts === 0) {
+        // First attempt: show warning and increment counter
+        setShowSkipWarning(true);
+        setSkipAttempts(1);
+        setTimeout(() => setShowSkipWarning(false), 3000);
+        return;
+      } else {
+        // Second attempt: actually skip the question
+        setSkipAttempts(0); // Reset for next question
+        // Continue with skip logic below
+      }
+    } else {
+      // Reset skip attempts if user has provided an answer
+      setSkipAttempts(0);
+    }
+
+    // Save current answer if there's input
+    if (input.trim() || lastAnswer) {
       setEntries([
         ...entries,
         {
           questionKey: JOURNAL_QUESTIONS[currentQuestionIndex].key,
           question: JOURNAL_QUESTIONS[currentQuestionIndex].question,
-          answer: lastAnswer,
+          answer: input.trim() || lastAnswer,
           audioUrl: currentAudioUrl || undefined,
         },
-      ])
+      ]);
+    }
 
-      setCurrentAudioUrl("")
+    setCurrentAudioUrl("");
+    setInput("");
 
-      const nextIndex = currentQuestionIndex + 1
-      setCurrentQuestionIndex(nextIndex)
+    if (currentQuestionIndex < JOURNAL_QUESTIONS.length - 1) {
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      setSkipAttempts(0); // Reset skip attempts for new question
 
       // Add next question as assistant message
       const nextQuestion = {
         id: `assistant-${Date.now()}`,
         role: "assistant" as const,
         content: JOURNAL_QUESTIONS[nextIndex].question,
-      }
-      setMessages((prev) => [...prev, nextQuestion])
+      };
+      setMessages((prev) => [...prev, nextQuestion]);
     } else {
-      handleComplete()
+      handleComplete();
     }
-  }
+  };
 
   const handleComplete = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
 
-    const userMessages = messages.filter((m) => m.role === "user")
-    const lastMessage = userMessages[userMessages.length - 1]
-    const lastAnswer = lastMessage?.content || ""
+    const userMessages = messages.filter((m) => m.role === "user");
+    const lastMessage = userMessages[userMessages.length - 1];
+    const lastAnswer = lastMessage?.content || "";
 
     const finalEntries = [
       ...entries,
@@ -211,12 +248,12 @@ export default function ChatPage() {
         answer: lastAnswer,
         audioUrl: currentAudioUrl || undefined,
       },
-    ]
+    ];
 
     if (MOCK_MODE) {
       // Mock save
-      console.log("[v0] Mock saving journal entries:", finalEntries)
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      console.log("[v0] Mock saving journal entries:", finalEntries);
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } else {
       try {
         const response = await fetch("/api/journal/save", {
@@ -227,43 +264,59 @@ export default function ChatPage() {
             entries: finalEntries,
             completed: JOURNAL_QUESTIONS.length,
           }),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to save journal")
+          throw new Error("Failed to save journal");
         }
       } catch (error) {
-        console.error("[v0] Failed to save journal:", error)
+        console.error("[v0] Failed to save journal:", error);
         // Continue anyway in mock mode
       }
     }
 
-    setIsComplete(true)
-    setIsSaving(false)
+    setIsComplete(true);
+    setIsSaving(false);
 
     const completionMessage = {
       id: `assistant-${Date.now()}`,
       role: "assistant" as const,
       content:
         "Thank you for sharing your day with me. Your journal entry has been saved. Take care, and I'll see you tomorrow!",
-    }
-    setMessages((prev) => [...prev, completionMessage])
-  }
+    };
+    setMessages((prev) => [...prev, completionMessage]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isTyping) return
+    e.preventDefault();
+    if (!input.trim() || isTyping) return;
 
-    handleSendMessage(input)
-    setInput("")
-  }
+    handleSendMessage(input);
+    setInput("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!input.trim() || isTyping) return;
+      handleSendMessage(input);
+      setInput("");
+    }
+  };
+
+  const hasAnswerForCurrentQuestion = () => {
+    const currentQuestionKey = JOURNAL_QUESTIONS[currentQuestionIndex].key;
+    return entries.some((entry) => entry.questionKey === currentQuestionKey);
+  };
 
   if (!sessionId) {
     return (
       <div className="flex min-h-svh items-center justify-center">
-        <div className="text-muted-foreground">Starting your journal session...</div>
+        <div className="text-muted-foreground">
+          Starting your journal session...
+        </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -294,7 +347,11 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl">
           {messages.map((message) => (
-            <ChatMessage key={message.id} role={message.role} content={message.content} />
+            <ChatMessage
+              key={message.id}
+              role={message.role}
+              content={message.content}
+            />
           ))}
           {isTyping && (
             <div className="px-4 py-6">
@@ -316,21 +373,43 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {showSkipWarning && (
+        <div className="fixed bottom-28 left-1/2 z-50 -translate-x-1/2">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 shadow-lg dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            You're skipping this question without answering. You can always go
+            back to answer it later.
+          </div>
+        </div>
+      )}
+
       {!isComplete && (
         <div className="border-t bg-background">
           <div className="mx-auto max-w-3xl p-4">
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Share your thoughts..."
-                className="min-h-[80px] resize-none"
-                disabled={isTyping}
-              />
-              <AudioRecorder onAudioUploaded={setCurrentAudioUrl} audioUrl={currentAudioUrl} />
+              <div className="flex items-end gap-2">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Share your thoughts..."
+                  className="min-h-[80px] resize-none flex-1"
+                  disabled={isTyping}
+                />
+                <AudioRecorder
+                  onAudioUploaded={setCurrentAudioUrl}
+                  audioUrl={currentAudioUrl}
+                />
+              </div>
               <div className="flex items-center justify-between">
-                <Button type="button" variant="outline" onClick={handleNextQuestion} disabled={isTyping || !input}>
-                  {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1 ? "Complete" : "Next question"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleNextQuestion}
+                  disabled={isTyping}
+                >
+                  {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1
+                    ? "Complete"
+                    : "Next question"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button type="submit" disabled={isTyping || !input}>
@@ -353,7 +432,9 @@ export default function ChatPage() {
                   : "Your journal entry has been saved"}
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => router.push("/history")}>View history</Button>
+                <Button onClick={() => router.push("/history")}>
+                  View history
+                </Button>
                 <Button variant="outline" onClick={() => router.refresh()}>
                   Start new entry
                 </Button>
@@ -363,5 +444,5 @@ export default function ChatPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
