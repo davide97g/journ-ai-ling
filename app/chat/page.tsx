@@ -5,6 +5,7 @@ import type React from "react";
 import AIBotBlobs from "@/components/ai-blob";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { ChatMessage } from "@/components/chat-message";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -294,11 +295,7 @@ export default function ChatPage() {
     if (currentQuestionIndex < JOURNAL_QUESTIONS.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
-
-      // Send next question as assistant message
-      sendMessage({
-        parts: [{ type: "text", text: JOURNAL_QUESTIONS[nextIndex].question }],
-      });
+      // No message sent to LLM - just update the question index
     } else {
       handleComplete();
     }
@@ -508,7 +505,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 overflow-y-auto relative max-h-[calc(100vh-15rem)] overflow-auto">
         {/* Background blob when not typing */}
 
         <div className="fixed inset-0 pointer-events-none z-0">
@@ -523,6 +520,17 @@ export default function ChatPage() {
             />
           </div>
         </div>
+
+        {/* Sticky question alert */}
+        {!isComplete && !showHint && (
+          <div className="sticky top-0 z-20 flex justify-center p-4">
+            <Alert className="max-w-2xl bg-background/95 backdrop-blur-sm border shadow-lg">
+              <AlertDescription className="text-center font-medium">
+                {JOURNAL_QUESTIONS[currentQuestionIndex]?.question}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         <div className="mx-auto max-w-3xl relative z-10">
           {/* Show hint message when no messages and no session */}
