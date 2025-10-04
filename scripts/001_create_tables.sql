@@ -110,6 +110,59 @@ CREATE POLICY "journal_entries_delete_own"
     )
   );
 
+-- Create messages table for chat messages
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES journal_sessions(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+
+-- Enable RLS on messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for messages (check ownership via session)
+CREATE POLICY "messages_select_own"
+  ON messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM journal_sessions
+      WHERE journal_sessions.id = messages.session_id
+      AND journal_sessions.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "messages_insert_own"
+  ON messages FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM journal_sessions
+      WHERE journal_sessions.id = messages.session_id
+      AND journal_sessions.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "messages_update_own"
+  ON messages FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM journal_sessions
+      WHERE journal_sessions.id = messages.session_id
+      AND journal_sessions.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "messages_delete_own"
+  ON messages FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM journal_sessions
+      WHERE journal_sessions.id = messages.session_id
+      AND journal_sessions.user_id = auth.uid()
+    )
+  );
+
 -- Create trigger to auto-create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER

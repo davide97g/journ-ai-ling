@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { journalEntries } from "@/lib/db/schema";
+import { messages } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
@@ -16,14 +16,11 @@ export async function POST(req: Request) {
   const { sessionId, message, currentQuestionIndex } = await req.json();
 
   try {
-    // Save the message as a journal entry
-    await db.insert(journalEntries).values({
+    // Save the message to the messages table
+    await db.insert(messages).values({
       sessionId,
-      questionKey: `message_${message.role}_${Date.now()}`,
-      question:
-        message.role === "assistant" ? "Assistant Response" : "User Message",
-      answer: message.content,
-      audioUrl: null,
+      role: message.role,
+      content: message.content,
     });
 
     return Response.json({ success: true });

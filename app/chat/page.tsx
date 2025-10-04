@@ -24,8 +24,26 @@ export default function ChatPage() {
   const [localMessages, setLocalMessages] = useState<
     Array<{ id: string; role: "user" | "assistant"; content: string }>
   >([]);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+  const [hintMessage, setHintMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Array of therapist-like hint messages
+  const hintMessages = [
+    "How are you feeling today?",
+    "Ready when you are.",
+    "What's on your mind?",
+    "How was your day?",
+    "What would you like to talk about?",
+    "I'm here to listen.",
+    "What's been going through your head lately?",
+    "How can I help you today?",
+    "What's weighing on your heart?",
+    "Tell me what's happening in your world.",
+  ];
 
   // Use the AI SDK useChat hook
   const { messages, sendMessage, status } = useChat({
@@ -40,36 +58,65 @@ export default function ChatPage() {
 
   const isLoading = status === "streaming";
 
+  // Check for existing session from URL on mount
   useEffect(() => {
-    async function createSession() {
-      try {
-        const response = await fetch("/api/journal/session", {
-          method: "POST",
-        });
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionIdFromUrl = urlParams.get("id");
 
-        if (!response.ok) {
-          throw new Error("Failed to create session");
-        }
-
-        const data = await response.json();
-        setSessionId(data.session.id);
-
-        // Add welcome message as placeholder (not sent to LLM, not saved to DB)
-        // We'll add this manually to the messages array
-        const welcomeMessage = {
-          id: "welcome",
-          role: "assistant" as const,
-          content: `Hi! I'm Collector, your journaling companion. I'm here to help you reflect on your day. ${JOURNAL_QUESTIONS[0].question}`,
-        };
-
-        // Add welcome message to the local messages array
-        setLocalMessages([welcomeMessage]);
-      } catch (error) {
-        console.error("Failed to create session:", error);
-      }
+    if (sessionIdFromUrl) {
+      loadExistingSession(sessionIdFromUrl);
+    } else {
+      // No existing session, show random hint
+      const randomMessage =
+        hintMessages[Math.floor(Math.random() * hintMessages.length)];
+      setHintMessage(randomMessage);
+      setShowHint(true);
+      setLocalMessages([]);
     }
-    createSession();
   }, []);
+
+  const loadExistingSession = async (sessionId: string) => {
+    setIsLoadingSession(true);
+    try {
+      // Load session details and messages
+      const [sessionResponse, messagesResponse] = await Promise.all([
+        fetch(`/api/journal/session/${sessionId}`),
+        fetch(`/api/journal/messages/${sessionId}`),
+      ]);
+
+      if (sessionResponse.ok && messagesResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        const messagesData = await messagesResponse.json();
+
+        setSessionId(sessionId);
+        setCurrentQuestionIndex(sessionData.session.completed || 0);
+        setIsComplete(
+          sessionData.session.completed === JOURNAL_QUESTIONS.length
+        );
+
+        // Load existing messages
+        if (messagesData.messages && messagesData.messages.length > 0) {
+          setLocalMessages(messagesData.messages);
+          setShowHint(false);
+        } else {
+          // No messages yet, show random hint
+          const randomMessage =
+            hintMessages[Math.floor(Math.random() * hintMessages.length)];
+          setHintMessage(randomMessage);
+          setShowHint(true);
+          setLocalMessages([]);
+        }
+      } else {
+        // Session not found, redirect to new chat
+        router.replace("/chat");
+      }
+    } catch (error) {
+      console.error("Failed to load session:", error);
+      router.replace("/chat");
+    } finally {
+      setIsLoadingSession(false);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -131,7 +178,16 @@ export default function ChatPage() {
   }, [messages, sessionId, isLoading]);
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || isCreatingSession) return;
+
+    // Hide hint when user sends first message
+    setShowHint(false);
+
+    // Create session on first message if it doesn't exist
+    if (!sessionId) {
+      await createSessionAndSendMessage(text);
+      return;
+    }
 
     console.log("[Chat Frontend] Sending message:", {
       text: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
@@ -142,6 +198,36 @@ export default function ChatPage() {
     sendMessage({
       parts: [{ type: "text", text }],
     });
+  };
+
+  const createSessionAndSendMessage = async (text: string) => {
+    setIsCreatingSession(true);
+    try {
+      const response = await fetch("/api/journal/session", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create session");
+      }
+
+      const data = await response.json();
+      const newSessionId = data.session.id;
+      setSessionId(newSessionId);
+
+      // Update URL with session ID
+      const newUrl = `/chat?id=${newSessionId}`;
+      window.history.replaceState({}, "", newUrl);
+
+      // Now send the message
+      sendMessage({
+        parts: [{ type: "text", text }],
+      });
+    } catch (error) {
+      console.error("Failed to create session:", error);
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   const handleNextQuestion = async () => {
@@ -196,9 +282,60 @@ export default function ChatPage() {
     });
   };
 
+  const handleDeleteSession = async () => {
+    if (!sessionId) return;
+
+    try {
+      const response = await fetch(`/api/journal/session/${sessionId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete session");
+      }
+
+      // Reset all state and clear messages
+      setSessionId(null);
+      setCurrentQuestionIndex(0);
+      setIsComplete(false);
+      setInput("");
+      setCurrentAudioUrl("");
+
+      // Clear all messages and show fresh random hint
+      const randomMessage =
+        hintMessages[Math.floor(Math.random() * hintMessages.length)];
+      setHintMessage(randomMessage);
+      setLocalMessages([]);
+      setShowHint(true);
+
+      // Clear useChat messages by resetting the hook
+      // We'll do this by refreshing the page to ensure clean state
+      window.location.href = "/chat";
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  };
+
+  const handleStartNewSession = () => {
+    // Reset all state and redirect to new chat
+    setSessionId(null);
+    setCurrentQuestionIndex(0);
+    setIsComplete(false);
+    setInput("");
+    setCurrentAudioUrl("");
+    setLocalMessages([]);
+    const randomMessage =
+      hintMessages[Math.floor(Math.random() * hintMessages.length)];
+    setHintMessage(randomMessage);
+    setShowHint(true);
+
+    // Use full page refresh to ensure clean state
+    window.location.href = "/chat";
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isCreatingSession) return;
 
     handleSendMessage(input);
     setInput("");
@@ -207,17 +344,17 @@ export default function ChatPage() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!input.trim() || isLoading) return;
+      if (!input.trim() || isLoading || isCreatingSession) return;
       handleSendMessage(input);
       setInput("");
     }
   };
 
-  if (!sessionId) {
+  if (isLoadingSession) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <div className="text-muted-foreground">
-          Starting your journal session...
+          Loading your journal session...
         </div>
       </div>
     );
@@ -234,6 +371,21 @@ export default function ChatPage() {
           <span className="text-sm text-muted-foreground">
             Question {currentQuestionIndex + 1} of {JOURNAL_QUESTIONS.length}
           </span>
+          {sessionId && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteSession}
+                className="text-destructive hover:text-destructive"
+              >
+                Delete session
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleStartNewSession}>
+                New session
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="icon" asChild>
             <Link href="/history">
               <History className="h-5 w-5" />
@@ -245,7 +397,16 @@ export default function ChatPage() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl">
-          {/* Display local messages (welcome message) */}
+          {/* Show hint message when no messages and no session */}
+          {showHint && localMessages.length === 0 && messages.length === 0 && (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg">{hintMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Display local messages */}
           {localMessages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -292,9 +453,13 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Share your thoughts..."
+                  placeholder={
+                    isCreatingSession
+                      ? "Creating session..."
+                      : "Share your thoughts..."
+                  }
                   className="min-h-[80px] resize-none flex-1"
-                  disabled={isLoading}
+                  disabled={isLoading || isCreatingSession}
                 />
                 <AudioRecorder
                   onAudioUploaded={setCurrentAudioUrl}
@@ -306,7 +471,7 @@ export default function ChatPage() {
                   type="button"
                   variant="outline"
                   onClick={handleNextQuestion}
-                  disabled={isLoading || isSaving}
+                  disabled={isLoading || isSaving || isCreatingSession}
                 >
                   {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1
                     ? "Complete"
@@ -315,7 +480,9 @@ export default function ChatPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading || !input || isSaving}
+                  disabled={
+                    isLoading || !input || isSaving || isCreatingSession
+                  }
                 >
                   <Send className="h-4 w-4" />
                   <span className="sr-only">Send message</span>
