@@ -93,6 +93,7 @@ export default function ChatPage() {
   const [userInitials, setUserInitials] = useState<string>("");
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
 
   // Fetch user data and generate initials
@@ -207,6 +208,29 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, localMessages]);
+
+  // Auto-focus textarea when bot finishes typing
+  useEffect(() => {
+    if (!isLoading && !isCreatingSession && textareaRef.current) {
+      // Small delay to ensure the UI has updated
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, isCreatingSession]);
+
+  // Auto-focus textarea when showing hint (new session)
+  useEffect(() => {
+    if (showHint && textareaRef.current) {
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 200);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [showHint]);
 
   useEffect(() => {
     if (isComplete) {
@@ -623,6 +647,7 @@ export default function ChatPage() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div className="flex items-end gap-2">
                 <Textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
