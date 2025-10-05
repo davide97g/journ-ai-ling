@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useApiKeyError } from "@/hooks/use-api-key-error";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { DatabaseQuestion, getUserQuestions } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
@@ -71,6 +72,7 @@ export default function ChatPage() {
   const [localMessages, setLocalMessages] = useState<
     Array<{ id: string; role: "user" | "assistant"; content: string }>
   >([]);
+  const user = useUserProfile();
 
   // Hook per gestire errori di API key
   const { handleApiKeyError } = useApiKeyError();
@@ -605,6 +607,10 @@ export default function ChatPage() {
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard">
               <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage
+                  src={user.profile?.avatar}
+                  alt={user.profile?.name}
+                />
                 <AvatarFallback className="rounded-lg">
                   {userInitials}
                 </AvatarFallback>

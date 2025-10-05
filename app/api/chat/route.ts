@@ -21,8 +21,6 @@ async function fetchUserQuestions(userId: string) {
       )
       .orderBy(asc(userQuestions.order));
 
-    console.log("questions", questions);
-
     // If user has no questions, copy default questions
     if (questions.length === 0) {
       // Copy default questions to this user
