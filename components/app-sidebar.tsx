@@ -1,20 +1,9 @@
 "use client";
 
-import {
-  BookOpen,
-  Bot,
-  Frame,
-  LifeBuoy,
-  Map,
-  PieChart,
-  Send,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react";
+import { Frame, LifeBuoy, Map, PieChart, Send } from "lucide-react";
 import Image from "next/image";
 import * as React from "react";
 
-import { useDashboard } from "@/app/dashboard/page";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -26,131 +15,64 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { dashboardPages } from "@/lib/dashboard-config";
+import { useDashboard } from "@/lib/dashboard-context";
 import { useEffect, useState } from "react";
 
-const data = {
-  navMain: [
-    {
-      title: "Journal",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+// Generate navigation data from dashboard configuration
+const generateNavData = () => {
+  const navMain = Object.values(dashboardPages).map((page) => ({
+    title: page.title,
+    url: `/dashboard/${page.id}`,
+    icon: page.icon,
+    isActive: page.id === "journal", // Default to journal being active
+    items: page.sections.map((section) => ({
+      title: section.title,
+      url: `/dashboard/${page.id}/${section.id}`,
+    })),
+  }));
+
+  return {
+    navMain,
+    navSecondary: [
+      {
+        title: "Support",
+        url: "#",
+        icon: LifeBuoy,
+      },
+      {
+        title: "Feedback",
+        url: "#",
+        icon: Send,
+      },
+    ],
+    projects: [
+      {
+        name: "Design Engineering",
+        url: "#",
+        icon: Frame,
+      },
+      {
+        name: "Sales & Marketing",
+        url: "#",
+        icon: PieChart,
+      },
+      {
+        name: "Travel",
+        url: "#",
+        icon: Map,
+      },
+    ],
+  };
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [userInitials, setUserInitials] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
-  const { setSection } = useDashboard();
+  const { navigateToSection } = useDashboard();
+
+  // Generate navigation data
+  const data = generateNavData();
 
   // Fetch user data and generate initials
   const fetchUserData = async () => {
@@ -177,10 +99,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   const handleNavigation = (item: { title: string; url: string }) => {
-    if (item.title === "History") {
-      setSection("history");
-    } else {
-      setSection("default");
+    // Extract page and section from URL
+    const urlParts = item.url.split("/").filter(Boolean);
+    if (urlParts.length >= 3) {
+      const [, pageId, sectionId] = urlParts;
+      navigateToSection(pageId, sectionId);
     }
   };
 

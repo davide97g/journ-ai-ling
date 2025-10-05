@@ -1,7 +1,6 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import { HistoryContent } from "@/components/history-content";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Breadcrumb,
@@ -17,28 +16,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { usePathname } from "next/navigation";
-import { createContext, useContext, useState } from "react";
-
-// Create context for dashboard state
-interface DashboardContextType {
-  section: string;
-  setSection: (section: string) => void;
-  page: string;
-  setPage: (page: string) => void;
-}
-
-const DashboardContext = createContext<DashboardContextType | undefined>(
-  undefined
-);
-
-export const useDashboard = () => {
-  const context = useContext(DashboardContext);
-  if (!context) {
-    throw new Error("useDashboard must be used within a DashboardProvider");
-  }
-  return context;
-};
+import { getBreadcrumbData, getSectionByPath } from "@/lib/dashboard-config";
+import { DashboardContext } from "@/lib/dashboard-context";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Default dashboard content component
 function DefaultDashboardContent() {
@@ -56,29 +37,55 @@ function DefaultDashboardContent() {
 
 // Main dashboard content component
 function DashboardContent() {
-  const { section } = useDashboard();
+  const pathname = usePathname();
+  const router = useRouter();
+  const section = getSectionByPath(pathname);
 
-  const renderContent = () => {
-    switch (section) {
-      case "history":
-        return <HistoryContent />;
-      default:
-        return <DefaultDashboardContent />;
-    }
-  };
+  // If we're at the root dashboard path, redirect to default section
+  if (pathname === "/dashboard") {
+    router.replace("/dashboard/journal/history");
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
-  return renderContent();
+  if (!section) {
+    return <DefaultDashboardContent />;
+  }
+
+  const SectionComponent = section.component;
+  return <SectionComponent />;
 }
 
 export default function Page() {
   const pathname = usePathname();
-  const [page, setPage] = useState(pathname.split("/").pop() || "Journal");
-  const [section, setSection] = useState(
-    pathname.split("/").pop() || "default"
-  );
+  const router = useRouter();
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
+
+  // Get breadcrumb data from the current path
+  const breadcrumbData = getBreadcrumbData(pathname);
+
+  // Navigation function
+  const navigateToSection = (pageId: string, sectionId: string) => {
+    const newPath = `/dashboard/${pageId}/${sectionId}`;
+    router.push(newPath);
+  };
+
+  // Update current section when pathname changes
+  useEffect(() => {
+    console.log("pathname", pathname);
+    const section = getSectionByPath(pathname);
+    console.log("section", section);
+    setCurrentSection(section?.id || null);
+  }, [pathname]);
 
   return (
-    <DashboardContext.Provider value={{ section, setSection, page, setPage }}>
+    <DashboardContext.Provider value={{ currentSection, navigateToSection }}>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
@@ -92,11 +99,13 @@ export default function Page() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="#">{page}</BreadcrumbLink>
+                    <BreadcrumbLink href="/dashboard">
+                      {breadcrumbData.page}
+                    </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{section}</BreadcrumbPage>
+                    <BreadcrumbPage>{breadcrumbData.section}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>

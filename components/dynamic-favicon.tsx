@@ -9,8 +9,8 @@ export const DynamicFavicon = () => {
   useEffect(() => {
     const updateFavicon = () => {
       const currentTheme = resolvedTheme || theme;
-      const faviconPath =
-        currentTheme === "dark" ? "/favicon-white.svg" : "/favicon.svg";
+      const faviconPath = "/favicon.svg";
+      // currentTheme === "dark" ? "/favicon-white.svg" : "/favicon.svg";
 
       // Find existing favicon link element
       let linkElement = document.querySelector(
