@@ -28,6 +28,7 @@ interface Session {
   date: Date;
   updatedAt: Date;
   completed: number;
+  starred: number;
   entries: Array<{
     questionKey: string;
     question: string;

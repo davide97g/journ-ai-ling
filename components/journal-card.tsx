@@ -14,9 +14,11 @@ import {
   CheckCircle2,
   Headphones,
   MessageSquare,
+  Star,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 interface JournalCardProps {
   session: {
@@ -24,6 +26,7 @@ interface JournalCardProps {
     date: Date;
     updatedAt: Date;
     completed: number;
+    starred: number;
     entries: Array<{
       questionKey: string;
       question: string;
@@ -40,6 +43,9 @@ export function JournalCard({
   onDelete,
   isDeleting = false,
 }: JournalCardProps) {
+  const [isStarring, setIsStarring] = useState(false);
+  const [starred, setStarred] = useState(session.starred === 1);
+
   const formattedDate = format(new Date(session.date), "EEEE, MMMM d, yyyy");
   const formattedUpdatedAt = format(
     new Date(session.updatedAt),
@@ -47,6 +53,34 @@ export function JournalCard({
   );
   const isComplete = session.completed === 8;
   const hasAudio = session.entries.some((entry) => entry.audioUrl);
+
+  const handleToggleStar = async () => {
+    if (isStarring) return;
+
+    setIsStarring(true);
+    try {
+      const response = await fetch("/api/journal/star", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId: session.id,
+          starred: !starred,
+        }),
+      });
+
+      if (response.ok) {
+        setStarred(!starred);
+      } else {
+        console.error("Failed to toggle star status");
+      }
+    } catch (error) {
+      console.error("Error toggling star status:", error);
+    } finally {
+      setIsStarring(false);
+    }
+  };
 
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -71,24 +105,52 @@ export function JournalCard({
                 </Badge>
               )}
             </div>
-            {onDelete && (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDelete(session)}
-                disabled={isDeleting}
-                className="h-8 w-8 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                onClick={handleToggleStar}
+                disabled={isStarring}
+                className={`h-8 w-8 transition-colors ${
+                  starred
+                    ? "text-yellow-500 hover:text-yellow-600"
+                    : "text-muted-foreground hover:text-yellow-500"
+                } disabled:opacity-50`}
               >
-                {isDeleting ? (
+                {isStarring ? (
                   <Spinner className="h-4 w-4" />
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <Star
+                    className={`h-4 w-4 ${starred ? "fill-current" : ""}`}
+                  />
                 )}
                 <span className="sr-only">
-                  {isDeleting ? "Deleting session..." : "Delete session"}
+                  {isStarring
+                    ? "Updating star status..."
+                    : starred
+                    ? "Remove from favorites"
+                    : "Add to favorites"}
                 </span>
               </Button>
-            )}
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(session)}
+                  disabled={isDeleting}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Spinner className="h-4 w-4" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {isDeleting ? "Deleting session..." : "Delete session"}
+                  </span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         <CardDescription>
@@ -136,6 +198,18 @@ export function JournalCard({
               <MessageSquare className="h-3 w-3" />
               Vedi Dettagli
             </Link>
+          </Badge>
+          <Badge
+            variant="outline"
+            className={`cursor-pointer transition-colors ${
+              starred
+                ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+                : "hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-200"
+            }`}
+            onClick={handleToggleStar}
+          >
+            <Star className={`h-3 w-3 ${starred ? "fill-current" : ""}`} />
+            {starred ? "Preferito" : "Aggiungi ai Preferiti"}
           </Badge>
         </div>
       </CardContent>

@@ -15,6 +15,7 @@ export const journalSessions = pgTable("journal_sessions", {
     .references(() => profiles.id, { onDelete: "cascade" }),
   date: timestamp("date").defaultNow().notNull(),
   completed: integer("completed").default(0).notNull(), // 0-8 tracking progress
+  starred: integer("starred").default(0).notNull(), // 0 = not starred, 1 = starred
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
