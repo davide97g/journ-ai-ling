@@ -37,7 +37,11 @@ interface Session {
   }>;
 }
 
-export function HistoryContent() {
+export function HistoryContent({
+  onlyStarred = false,
+}: {
+  onlyStarred?: boolean;
+}) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -52,7 +56,15 @@ export function HistoryContent() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const response = await fetch("/api/journal/history");
+        const response = await fetch(
+          `/api/journal/history?onlyStarred=${onlyStarred}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch history");
@@ -147,7 +159,9 @@ export function HistoryContent() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Journal History</h1>
+          <h1 className="text-2xl font-semibold">
+            {onlyStarred ? "Starred Journal Entries" : "Journal History"}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>

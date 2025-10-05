@@ -1,6 +1,6 @@
 "use server";
 import { HistoryContent } from "@/components/history-content";
 
-export default function HistoryPage() {
+export default async function HistoryPage() {
   return <HistoryContent />;
 }

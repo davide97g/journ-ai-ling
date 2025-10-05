@@ -48,17 +48,7 @@ export const dashboardSections: Record<string, DashboardSection> = {
     title: "Starred",
     description: "Your favorite entries",
     icon: Star,
-    component: () => (
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Starred Entries</h1>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">No starred entries yet</p>
-        </div>
-      </div>
-    ),
+    component: () => <HistoryContent onlyStarred={true} />,
     breadcrumb: {
       page: "Journal",
       section: "Starred",
