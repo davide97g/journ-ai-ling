@@ -563,7 +563,7 @@ export default function ChatPage() {
             </>
           )}
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/history">
+            <Link href="/dashboard/journal/history">
               <History className="h-5 w-5" />
               <span className="sr-only">View history</span>
             </Link>
@@ -740,7 +740,9 @@ export default function ChatPage() {
                 Your journal entry has been saved
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => router.push("/history")}>
+                <Button
+                  onClick={() => router.push("/dashboard/journal/history")}
+                >
                   View history
                 </Button>
                 <Button variant="outline" onClick={() => router.refresh()}>
@@ -769,7 +771,7 @@ export default function ChatPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row items-center justify-center">
-            <Button onClick={() => router.push("/history")}>
+            <Button onClick={() => router.push("/dashboard/journal/history")}>
               Vedi nella Cronologia
             </Button>
             <Button

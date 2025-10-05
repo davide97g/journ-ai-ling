@@ -2,6 +2,7 @@
 
 import { Frame, LifeBuoy, Map, PieChart, Send } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import * as React from "react";
 
 import { NavMain } from "@/components/nav-main";
@@ -117,7 +118,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              <Link href="/chat">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src={"/favicon-white.svg"}
@@ -131,7 +132,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-medium">JournalAI</span>
                   <span className="truncate text-xs">Daily Journaling</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
