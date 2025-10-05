@@ -5,6 +5,7 @@ import type React from "react";
 import AIBotBlobs from "@/components/ai-blob";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { ChatMessage } from "@/components/chat-message";
+import { ChatSkeleton } from "@/components/chat-skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -71,6 +72,7 @@ export default function ChatPage() {
 
     return () => clearTimeout(timeoutId);
   }, [input]);
+
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isDeletingSession, setIsDeletingSession] = useState(false);
@@ -428,13 +430,7 @@ export default function ChatPage() {
   };
 
   if (isLoadingSession) {
-    return (
-      <div className="flex min-h-svh items-center justify-center">
-        <div className="text-muted-foreground">
-          Loading your journal session...
-        </div>
-      </div>
-    );
+    return <ChatSkeleton />;
   }
 
   return (
