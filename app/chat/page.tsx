@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
@@ -446,11 +452,6 @@ export default function ChatPage() {
           <h1 className="font-semibold">Daily Journal</h1>
         </div>
         <div className="flex items-center gap-2">
-          {!isComplete && (
-            <span className="text-sm text-muted-foreground">
-              Question {currentQuestionIndex + 1} of {JOURNAL_QUESTIONS.length}
-            </span>
-          )}
           {isComplete && (
             <Badge variant="secondary" className="gap-1">
               <CheckCircle2 className="h-3 w-3" />
@@ -639,17 +640,48 @@ export default function ChatPage() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleNextQuestion}
-                  disabled={isLoading || isSaving || isCreatingSession}
-                >
-                  {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1
-                    ? "Complete"
-                    : "Next question"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleNextQuestion}
+                          disabled={isLoading || isSaving || isCreatingSession}
+                        >
+                          {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1
+                            ? "Complete"
+                            : "Next question"}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {currentQuestionIndex ===
+                        JOURNAL_QUESTIONS.length - 1 ? (
+                          <p className="max-w-xs">
+                            Completerà il tuo diario e lo salverà nel sistema.
+                            Potrai visualizzarlo nella cronologia.
+                          </p>
+                        ) : (
+                          <p className="max-w-xs">
+                            <strong>Prossima domanda:</strong>
+                            <br />
+                            {
+                              JOURNAL_QUESTIONS[currentQuestionIndex + 1]
+                                ?.question
+                            }
+                          </p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {!isComplete && (
+                    <span className="text-sm text-muted-foreground">
+                      {currentQuestionIndex + 1} / {JOURNAL_QUESTIONS.length}
+                    </span>
+                  )}
+                </div>
                 <Button
                   type="submit"
                   disabled={
