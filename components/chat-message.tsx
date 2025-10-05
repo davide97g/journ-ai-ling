@@ -5,9 +5,15 @@ interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
   userInitials?: string;
+  isLoading?: boolean;
 }
 
-export function ChatMessage({ role, content, userInitials }: ChatMessageProps) {
+export function ChatMessage({
+  role,
+  content,
+  userInitials,
+  isLoading,
+}: ChatMessageProps) {
   const isUser = role === "user";
 
   return (
@@ -27,7 +33,7 @@ export function ChatMessage({ role, content, userInitials }: ChatMessageProps) {
           {isUser ? (
             <span className="text-sm font-medium">{userInitials || "U"}</span>
           ) : (
-            <Bot className="h-4 w-4" />
+            <Bot className={cn("h-4 w-4", isLoading && "animate-pulse")} />
           )}
         </div>
         <div className="flex-1 space-y-2 overflow-hidden">

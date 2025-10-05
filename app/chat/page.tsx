@@ -619,24 +619,9 @@ export default function ChatPage() {
                 .map((part) => (part.type === "text" ? part.text : ""))
                 .join("")}
               userInitials={userInitials}
+              isLoading={isLoading}
             />
           ))}
-          {/* {isLoading && (
-            <div className="px-4 py-6">
-              <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )} */}
           <div ref={messagesEndRef} />
         </div>
       </div>
