@@ -44,6 +44,19 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User questions table - customizable journal questions
+export const userQuestions = pgTable("user_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  order: integer("order").notNull(), // For sorting
+  isActive: integer("is_active").default(1).notNull(), // 0 = inactive, 1 = active
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type JournalSession = typeof journalSessions.$inferSelect;
@@ -52,3 +65,5 @@ export type JournalEntry = typeof journalEntries.$inferSelect;
 export type NewJournalEntry = typeof journalEntries.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type UserQuestion = typeof userQuestions.$inferSelect;
+export type NewUserQuestion = typeof userQuestions.$inferInsert;

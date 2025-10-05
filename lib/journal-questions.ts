@@ -1,4 +1,5 @@
-export const JOURNAL_QUESTIONS = [
+// Legacy hardcoded questions - kept for fallback
+export const DEFAULT_JOURNAL_QUESTIONS = [
   {
     key: "mood",
     question: "Come ti senti oggi? Qual è il tuo umore generale?",
@@ -33,4 +34,42 @@ export const JOURNAL_QUESTIONS = [
   },
 ] as const;
 
-export type QuestionKey = (typeof JOURNAL_QUESTIONS)[number]["key"];
+export type QuestionKey = (typeof DEFAULT_JOURNAL_QUESTIONS)[number]["key"];
+
+// Interface for database questions
+export interface DatabaseQuestion {
+  id: string;
+  question: string;
+  order: number;
+  isActive: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Function to fetch questions from database
+export async function fetchUserQuestions(): Promise<DatabaseQuestion[]> {
+  try {
+    const response = await fetch("/api/journal/questions/user");
+    if (response.ok) {
+      const data = await response.json();
+      return data.questions || [];
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching user questions:", error);
+    return [];
+  }
+}
+
+// Function to get questions with fallback to hardcoded ones
+export async function getUserQuestions(): Promise<DatabaseQuestion[]> {
+  const customQuestions = await fetchUserQuestions();
+
+  // If no questions from database, return empty array
+  // The API will handle copying default questions
+  if (customQuestions.length === 0) {
+    return [];
+  }
+
+  return customQuestions;
+}

@@ -1,4 +1,5 @@
 import { HistoryContent } from "@/components/history-content";
+import { SettingsContent } from "@/components/settings-content";
 import {
   BarChart3,
   BookOpen,
@@ -80,17 +81,7 @@ export const dashboardSections: Record<string, DashboardSection> = {
     title: "Settings",
     description: "Journal preferences",
     icon: Settings2,
-    component: () => (
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-        <div className="flex items-center gap-2">
-          <Settings2 className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Settings</h1>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Settings coming soon</p>
-        </div>
-      </div>
-    ),
+    component: SettingsContent,
     breadcrumb: {
       page: "Journal",
       section: "Settings",

@@ -164,6 +164,37 @@ CREATE POLICY "messages_delete_own"
     )
   );
 
+-- Create user_questions table
+CREATE TABLE IF NOT EXISTS user_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  "order" INTEGER NOT NULL,
+  is_active INTEGER DEFAULT 1 NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+
+-- Enable RLS on user_questions
+ALTER TABLE user_questions ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for user_questions
+CREATE POLICY "user_questions_select_own"
+  ON user_questions FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "user_questions_insert_own"
+  ON user_questions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_questions_update_own"
+  ON user_questions FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "user_questions_delete_own"
+  ON user_questions FOR DELETE
+  USING (auth.uid() = user_id);
+
 -- Create trigger to auto-create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER

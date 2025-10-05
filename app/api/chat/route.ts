@@ -1,10 +1,61 @@
 import { JournalMessage } from "@/app/chat/page";
-import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
+import { db } from "@/lib/db";
+import { userQuestions } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { openai } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText } from "ai";
+import { and, asc, eq } from "drizzle-orm";
 
 export const maxDuration = 30;
+
+// Function to fetch user questions directly from database
+async function fetchUserQuestions(userId: string) {
+  try {
+    // Get all active questions for the user, ordered by order field
+    const questions = await db
+      .select()
+      .from(userQuestions)
+      .where(
+        and(eq(userQuestions.userId, userId), eq(userQuestions.isActive, 1))
+      )
+      .orderBy(asc(userQuestions.order));
+
+    console.log("questions", questions);
+
+    // If user has no questions, copy default questions
+    if (questions.length === 0) {
+      // Copy default questions to this user
+      await db.execute(`
+        INSERT INTO user_questions (user_id, question, "order", is_active, created_at, updated_at)
+        SELECT 
+          '${userId}'::uuid,
+          question,
+          "order",
+          is_active,
+          NOW(),
+          NOW()
+        FROM user_questions 
+        WHERE user_id = '2dd6945c-4912-4ad3-9cb3-3ad36aec15f7'::uuid
+        AND is_active = 1
+        ORDER BY "order"
+      `);
+
+      // Fetch the newly copied questions
+      const newQuestions = await db
+        .select()
+        .from(userQuestions)
+        .where(eq(userQuestions.userId, userId))
+        .orderBy(asc(userQuestions.order));
+
+      return newQuestions;
+    }
+
+    return questions;
+  } catch (error) {
+    console.error("Error fetching user questions:", error);
+    return [];
+  }
+}
 
 export async function POST(req: Request) {
   console.log("[Chat API] Starting chat request");
@@ -39,8 +90,9 @@ export async function POST(req: Request) {
     userId: user.id,
   });
 
+  const userQuestions = await fetchUserQuestions(user.id);
   // Get the current question
-  const currentQuestion = JOURNAL_QUESTIONS[currentQuestionIndex];
+  const currentQuestion = userQuestions[currentQuestionIndex];
   console.log("[Chat API] Current question:", {
     index: currentQuestionIndex,
     question: currentQuestion.question,

@@ -37,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
+import { DatabaseQuestion, getUserQuestions } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
 import {
@@ -59,6 +59,7 @@ export type JournalMessage = UIMessage & {
 };
 
 export default function ChatPage() {
+  const [questions, setQuestions] = useState<DatabaseQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("");
@@ -69,6 +70,21 @@ export default function ChatPage() {
   const [localMessages, setLocalMessages] = useState<
     Array<{ id: string; role: "user" | "assistant"; content: string }>
   >([]);
+
+  // Load questions on component mount
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        const userQuestions = await getUserQuestions();
+        console.log("userQuestions", userQuestions);
+        setQuestions(userQuestions);
+      } catch (error) {
+        console.error("Error loading questions:", error);
+      }
+    };
+
+    loadQuestions();
+  }, []);
 
   // Typing detection with debounce
   useEffect(() => {
@@ -178,9 +194,7 @@ export default function ChatPage() {
 
         setSessionId(sessionId);
         setCurrentQuestionIndex(sessionData.session.completed || 0);
-        setIsComplete(
-          sessionData.session.completed === JOURNAL_QUESTIONS.length
-        );
+        setIsComplete(sessionData.session.completed === questions.length);
 
         // Load existing messages
         if (messagesData.messages && messagesData.messages.length > 0) {
@@ -355,7 +369,7 @@ export default function ChatPage() {
     setCurrentAudioUrl("");
     setInput("");
 
-    if (currentQuestionIndex < JOURNAL_QUESTIONS.length - 1) {
+    if (currentQuestionIndex < questions.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
       // No message sent to LLM - just update the question index
@@ -374,7 +388,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           sessionId,
           entries: [], // No entries to save, just mark as complete
-          completed: JOURNAL_QUESTIONS.length,
+          completed: questions.length,
         }),
       });
 
@@ -602,7 +616,7 @@ export default function ChatPage() {
           <div className="sticky top-0 z-20 flex justify-center p-4">
             <Alert className="max-w-2xl bg-background/95 backdrop-blur-sm border shadow-lg">
               <AlertDescription className="text-center font-medium">
-                {JOURNAL_QUESTIONS[currentQuestionIndex]?.question}
+                {questions[currentQuestionIndex]?.question}
               </AlertDescription>
             </Alert>
           </div>
@@ -694,15 +708,14 @@ export default function ChatPage() {
                           onClick={handleNextQuestion}
                           disabled={isLoading || isSaving || isCreatingSession}
                         >
-                          {currentQuestionIndex === JOURNAL_QUESTIONS.length - 1
+                          {currentQuestionIndex === questions.length - 1
                             ? "Complete"
                             : "Next question"}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {currentQuestionIndex ===
-                        JOURNAL_QUESTIONS.length - 1 ? (
+                        {currentQuestionIndex === questions.length - 1 ? (
                           <p className="max-w-xs">
                             Completerà il tuo diario e lo salverà nel sistema.
                             Potrai visualizzarlo nella cronologia.
@@ -711,10 +724,7 @@ export default function ChatPage() {
                           <p className="max-w-xs">
                             <strong>Prossima domanda:</strong>
                             <br />
-                            {
-                              JOURNAL_QUESTIONS[currentQuestionIndex + 1]
-                                ?.question
-                            }
+                            {questions[currentQuestionIndex + 1]?.question}
                           </p>
                         )}
                       </TooltipContent>
@@ -722,7 +732,7 @@ export default function ChatPage() {
                   </TooltipProvider>
                   {!isComplete && (
                     <span className="text-sm text-muted-foreground">
-                      {currentQuestionIndex + 1} / {JOURNAL_QUESTIONS.length}
+                      {currentQuestionIndex + 1} / {questions.length}
                     </span>
                   )}
                 </div>
