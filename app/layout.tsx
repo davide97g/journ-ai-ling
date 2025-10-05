@@ -1,5 +1,6 @@
 import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -28,6 +29,7 @@ export default function RootLayout({
         >
           <DynamicFavicon />
           {children}
+          <Toaster />
           <Analytics />
         </ThemeProvider>
       </body>

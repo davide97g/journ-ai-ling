@@ -44,7 +44,7 @@ interface Question {
   updatedAt: string;
 }
 
-export function SettingsContent() {
+export function QuestionsContent() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -260,9 +260,12 @@ export function SettingsContent() {
           </div>
         ) : (
           questions.map((question, index) => (
-            <Item key={question.id} className="p-4">
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <Item key={question.id} className="p-4" variant="outline">
+              <div
+                className="flex items-center justify-between gap-3 w-full"
+                draggable
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                 <div className="flex-1">
                   <p className="font-medium">{question.question}</p>
                 </div>

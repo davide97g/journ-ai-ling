@@ -1,5 +1,6 @@
+import { AiSettingsContent } from "@/components/ai-settings-content";
 import { HistoryContent } from "@/components/history-content";
-import { SettingsContent } from "@/components/settings-content";
+import { QuestionsContent } from "@/components/questions-content";
 import {
   BarChart3,
   BookOpen,
@@ -76,15 +77,15 @@ export const dashboardSections: Record<string, DashboardSection> = {
       section: "Analytics",
     },
   },
-  settings: {
-    id: "settings",
-    title: "Settings",
+  questions: {
+    id: "questions",
+    title: "Questions",
     description: "Journal preferences",
     icon: Settings2,
-    component: SettingsContent,
+    component: QuestionsContent,
     breadcrumb: {
       page: "Journal",
-      section: "Settings",
+      section: "Questions",
     },
   },
 };
@@ -100,36 +101,24 @@ export const dashboardPages: Record<string, DashboardPage> = {
       dashboardSections.history,
       dashboardSections.starred,
       dashboardSections.analytics,
-      dashboardSections.settings,
+      dashboardSections.questions,
     ],
   },
-  models: {
-    id: "models",
-    title: "Models",
-    description: "AI model management",
-    icon: Bot,
+  settings: {
+    id: "settings",
+    title: "Settings",
+    description: "AI model and configuration settings",
+    icon: Settings2,
     sections: [
       {
-        id: "genesis",
-        title: "Genesis",
-        description: "Primary AI model",
+        id: "ai-settings",
+        title: "AI Settings",
+        description: "OpenAI model and API configuration",
         icon: Bot,
-        component: () => (
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
-              <h1 className="text-2xl font-semibold">Genesis Model</h1>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground">
-                Model configuration coming soon
-              </p>
-            </div>
-          </div>
-        ),
+        component: AiSettingsContent,
         breadcrumb: {
-          page: "Models",
-          section: "Genesis",
+          page: "Settings",
+          section: "AI Settings",
         },
       },
     ],
