@@ -128,7 +128,7 @@ export function AudioRecorder({
       variant={isRecording ? "destructive" : "ghost"}
       size="icon"
       onClick={isRecording ? stopRecording : startRecording}
-      className={cn("h-8 w-8", isRecording && "animate-pulse")}
+      className={cn("h-10 w-10", isRecording && "animate-pulse")}
     >
       {isRecording ? (
         <Square className="h-4 w-4" />

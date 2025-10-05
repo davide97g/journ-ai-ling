@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,11 +42,11 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
 import {
   ArrowRight,
-  BookOpen,
   CheckCircle2,
   History,
   Plus,
   Send,
+  Signature,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
@@ -472,8 +473,16 @@ export default function ChatPage() {
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
+          <Signature className="h-5 w-5" />
           <h1 className="font-semibold">Daily Journal</h1>
+          <span className="text-sm text-muted-foreground capitalize">
+            {new Date().toLocaleDateString("it-IT", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {isComplete && (
@@ -512,7 +521,7 @@ export default function ChatPage() {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteSession}
-                      className="bg-destructive hover:bg-destructive/90"
+                      className="bg-destructive hover:bg-destructive/90 text-white/90"
                     >
                       {isDeletingSession ? "Deleting..." : "Delete"}
                     </AlertDialogAction>
@@ -557,6 +566,16 @@ export default function ChatPage() {
             <Link href="/history">
               <History className="h-5 w-5" />
               <span className="sr-only">View history</span>
+            </Link>
+          </Button>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard">
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="sr-only">Go to dashboard</span>
             </Link>
           </Button>
         </div>
@@ -629,8 +648,9 @@ export default function ChatPage() {
       {!isComplete && (
         <div className="border-t bg-background">
           <div className="mx-auto max-w-3xl p-4">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <div className="flex items-end gap-2">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* Row: Textarea + Column (Audio, Send) */}
+              <div className="flex gap-2">
                 <Textarea
                   ref={textareaRef}
                   value={input}
@@ -644,11 +664,25 @@ export default function ChatPage() {
                   className="min-h-[80px] resize-none flex-1"
                   disabled={isLoading || isCreatingSession}
                 />
-                <AudioRecorder
-                  onAudioUploaded={setCurrentAudioUrl}
-                  audioUrl={currentAudioUrl}
-                />
+                <div className="flex flex-col gap-2">
+                  <AudioRecorder
+                    onAudioUploaded={setCurrentAudioUrl}
+                    audioUrl={currentAudioUrl}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={
+                      isLoading || !input || isSaving || isCreatingSession
+                    }
+                    className="h-10 w-10 p-0"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Send message</span>
+                  </Button>
+                </div>
               </div>
+
+              {/* Next Question Part */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TooltipProvider>
@@ -692,15 +726,6 @@ export default function ChatPage() {
                     </span>
                   )}
                 </div>
-                <Button
-                  type="submit"
-                  disabled={
-                    isLoading || !input || isSaving || isCreatingSession
-                  }
-                >
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send message</span>
-                </Button>
               </div>
             </form>
           </div>
