@@ -32,7 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, UIMessage } from "ai";
 import {
   ArrowRight,
   BookOpen,
@@ -45,6 +45,11 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+export type JournalMessage = UIMessage & {
+  sessionId: string;
+  currentQuestionIndex: number;
+};
 
 export default function ChatPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -122,13 +127,9 @@ export default function ChatPage() {
   ];
 
   // Use the AI SDK useChat hook
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status } = useChat<JournalMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: {
-        sessionId,
-        currentQuestionIndex,
-      },
     }),
   });
 
@@ -282,6 +283,8 @@ export default function ChatPage() {
 
     sendMessage({
       parts: [{ type: "text", text }],
+      sessionId,
+      currentQuestionIndex,
     });
   };
 
@@ -307,6 +310,8 @@ export default function ChatPage() {
       // Now send the message
       sendMessage({
         parts: [{ type: "text", text }],
+        sessionId: newSessionId,
+        currentQuestionIndex,
       });
     } catch (error) {
       console.error("Failed to create session:", error);

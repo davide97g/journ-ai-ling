@@ -1,7 +1,8 @@
+import { JournalMessage } from "@/app/chat/page";
 import { JOURNAL_QUESTIONS } from "@/lib/journal-questions";
 import { createClient } from "@/lib/supabase/server";
 import { openai } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, streamText } from "ai";
 
 export const maxDuration = 30;
 
@@ -20,8 +21,15 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { messages }: { messages: UIMessage[] } = body;
-  const { sessionId, currentQuestionIndex, modelProvider = "openai" } = body;
+  const { messages }: { messages: JournalMessage[] } = body;
+  const { modelProvider = "openai" } = body;
+
+  const sessionId =
+    messages.length > 0 ? messages[messages.length - 1].sessionId : null;
+  const currentQuestionIndex =
+    messages.length > 0
+      ? messages[messages.length - 1].currentQuestionIndex
+      : 0;
 
   console.log("[Chat API] Request details:", {
     sessionId,
