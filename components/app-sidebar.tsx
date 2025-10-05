@@ -14,9 +14,8 @@ import {
 import Image from "next/image";
 import * as React from "react";
 
+import { useDashboard } from "@/app/dashboard/page";
 import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -32,7 +31,7 @@ import { useEffect, useState } from "react";
 const data = {
   navMain: [
     {
-      title: "Playground",
+      title: "Journal",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
@@ -151,6 +150,8 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [userInitials, setUserInitials] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
+  const { setSection } = useDashboard();
+
   // Fetch user data and generate initials
   const fetchUserData = async () => {
     try {
@@ -172,6 +173,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     } catch (error) {
       console.error("Failed to fetch user data:", error);
       setUserInitials("U");
+    }
+  };
+
+  const handleNavigation = (item: { title: string; url: string }) => {
+    if (item.title === "History") {
+      setSection("history");
+    } else {
+      setSection("default");
     }
   };
 
@@ -205,9 +214,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={data.navMain} onItemClick={handleNavigation} />
+        {/* <NavProjects projects={data.projects} />  */}
+        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser
