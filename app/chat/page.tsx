@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,6 +35,7 @@ import { DefaultChatTransport } from "ai";
 import {
   ArrowRight,
   BookOpen,
+  CheckCircle2,
   History,
   Plus,
   Send,
@@ -449,7 +451,10 @@ export default function ChatPage() {
             </span>
           )}
           {isComplete && (
-            <span className="text-sm text-muted-foreground">Completato</span>
+            <Badge variant="secondary" className="gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              Completato
+            </Badge>
           )}
           {sessionId && (
             <>

@@ -124,12 +124,19 @@ export function JournalCard({
           )}
         </div>
         <div className="mt-4 flex gap-2">
-          <Button asChild variant="outline" size="sm" className="flex-1">
-            <Link href={`/chat?id=${session.id}`}>
-              <MessageSquare className="mr-2 h-4 w-4" />
+          <Badge
+            asChild
+            variant="outline"
+            className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            <Link
+              href={`/chat?id=${session.id}`}
+              className="flex items-center gap-1"
+            >
+              <MessageSquare className="h-3 w-3" />
               Vedi Dettagli
             </Link>
-          </Button>
+          </Badge>
         </div>
       </CardContent>
     </Card>
