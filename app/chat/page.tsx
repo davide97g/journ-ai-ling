@@ -37,6 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useApiKeyError } from "@/hooks/use-api-key-error";
 import { DatabaseQuestion, getUserQuestions } from "@/lib/journal-questions";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
@@ -70,6 +71,9 @@ export default function ChatPage() {
   const [localMessages, setLocalMessages] = useState<
     Array<{ id: string; role: "user" | "assistant"; content: string }>
   >([]);
+
+  // Hook per gestire errori di API key
+  const { handleApiKeyError } = useApiKeyError();
 
   // Load questions on component mount
   useEffect(() => {
@@ -151,10 +155,26 @@ export default function ChatPage() {
   ];
 
   // Use the AI SDK useChat hook
-  const { messages, sendMessage, status } = useChat<JournalMessage>({
+  const { messages, sendMessage, status, error } = useChat<JournalMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
     }),
+    onError: (error) => {
+      console.error("Chat error:", error);
+
+      // Gestisci errori di API key
+      if (error.message.includes("API key")) {
+        handleApiKeyError({
+          code: "API_KEY_ERROR",
+          message: error.message,
+        });
+      } else if (error.message.includes("Unauthorized")) {
+        handleApiKeyError({
+          code: "NO_API_KEY",
+          message: "Please configure your API key",
+        });
+      }
+    },
   });
 
   const isLoading = status === "streaming";

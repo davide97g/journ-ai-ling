@@ -57,6 +57,15 @@ export const userQuestions = pgTable("user_questions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// API Keys table - encrypted user API keys
+export const apiKeys = pgTable("api_keys", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  keyEncrypted: text("key_encrypted").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type JournalSession = typeof journalSessions.$inferSelect;
@@ -67,3 +76,5 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type UserQuestion = typeof userQuestions.$inferSelect;
 export type NewUserQuestion = typeof userQuestions.$inferInsert;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;

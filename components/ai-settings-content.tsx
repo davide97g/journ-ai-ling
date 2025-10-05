@@ -18,8 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useApiKey } from "@/hooks/use-api-key";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Copy, Eye, EyeOff, Key, Save, Trash2 } from "lucide-react";
+import {
+  Bot,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Key,
+  Save,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ModelConfig {
@@ -34,6 +44,7 @@ interface ModelConfig {
 interface ApiKeyConfig {
   hasKey: boolean;
   keyPreview: string;
+  createdAt: string | null;
 }
 
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
@@ -67,43 +78,30 @@ const MODEL_OPTIONS = [
 export function AiSettingsContent() {
   const [modelConfig, setModelConfig] =
     useState<ModelConfig>(DEFAULT_MODEL_CONFIG);
-  const [apiKeyConfig, setApiKeyConfig] = useState<ApiKeyConfig>({
-    hasKey: false,
-    keyPreview: "",
-  });
   const [newApiKey, setNewApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const { toast } = useToast();
 
-  // Load settings on component mount
+  // Usa il nuovo hook per gestire le chiavi API
+  const { apiKeyStatus, isLoading, saveApiKey, deleteApiKey, validateApiKey } =
+    useApiKey();
+
+  // Load model configuration on component mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadModelConfig = () => {
       try {
-        // Load model configuration from localStorage
         const savedModelConfig = localStorage.getItem("ai-model-config");
         if (savedModelConfig) {
           setModelConfig(JSON.parse(savedModelConfig));
         }
-
-        // Load API key status from localStorage
-        const savedApiKey = localStorage.getItem("openai-api-key");
-        if (savedApiKey) {
-          setApiKeyConfig({
-            hasKey: true,
-            keyPreview: `sk-...${savedApiKey.slice(-4)}`,
-          });
-        }
-
-        setIsLoading(false);
       } catch (error) {
-        console.error("Error loading settings:", error);
-        setIsLoading(false);
+        console.error("Error loading model config:", error);
       }
     };
 
-    loadSettings();
+    loadModelConfig();
   }, []);
 
   const handleSaveApiKey = async () => {
@@ -125,19 +123,23 @@ export function AiSettingsContent() {
       return;
     }
 
+    setIsSaving(true);
     try {
-      // Store API key securely in localStorage
-      localStorage.setItem("openai-api-key", newApiKey.trim());
-      setApiKeyConfig({
-        hasKey: true,
-        keyPreview: `sk-...${newApiKey.trim().slice(-4)}`,
-      });
-      setNewApiKey("");
+      const result = await saveApiKey(newApiKey.trim());
 
-      toast({
-        title: "Success",
-        description: "API key saved successfully",
-      });
+      if (result.success) {
+        setNewApiKey("");
+        toast({
+          title: "Success",
+          description: "API key saved securely",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to save API key",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error saving API key:", error);
       toast({
@@ -145,40 +147,64 @@ export function AiSettingsContent() {
         description: "Failed to save API key",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleRemoveApiKey = () => {
-    localStorage.removeItem("openai-api-key");
-    setApiKeyConfig({
-      hasKey: false,
-      keyPreview: "",
-    });
-    setNewApiKey("");
+  const handleRemoveApiKey = async () => {
+    try {
+      const result = await deleteApiKey();
 
-    toast({
-      title: "Success",
-      description: "API key removed successfully",
-    });
-  };
-
-  const handleCopyApiKey = async () => {
-    const savedApiKey = localStorage.getItem("openai-api-key");
-    if (savedApiKey) {
-      try {
-        await navigator.clipboard.writeText(savedApiKey);
+      if (result.success) {
+        setNewApiKey("");
         toast({
           title: "Success",
-          description: "API key copied to clipboard",
+          description: "API key removed successfully",
         });
-      } catch (error) {
-        console.error("Error copying to clipboard:", error);
+      } else {
         toast({
           title: "Error",
-          description: "Failed to copy to clipboard",
+          description: result.error || "Failed to remove API key",
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error("Error removing API key:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove API key",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleValidateApiKey = async () => {
+    setIsValidating(true);
+    try {
+      const result = await validateApiKey();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "API key is valid and working",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "API key validation failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error validating API key:", error);
+      toast({
+        title: "Error",
+        description: "Failed to validate API key",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -246,24 +272,29 @@ export function AiSettingsContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {apiKeyConfig.hasKey ? (
+            {apiKeyStatus.hasKey ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-2">
                     <Key className="h-4 w-4 text-muted-foreground" />
                     <span className="font-mono text-sm">
-                      {apiKeyConfig.keyPreview}
+                      {apiKeyStatus.keyPreview}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleCopyApiKey}
+                      onClick={handleValidateApiKey}
+                      disabled={isValidating}
                       className="h-8"
                     >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy
+                      {isValidating ? (
+                        <XCircle className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      {isValidating ? "Validating..." : "Validate"}
                     </Button>
                     <Button
                       variant="outline"
@@ -277,8 +308,13 @@ export function AiSettingsContent() {
                   </div>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Your API key is stored securely in your browser's local
-                  storage.
+                  Your API key is encrypted and stored securely on our servers.
+                  {apiKeyStatus.createdAt && (
+                    <span className="block mt-1">
+                      Saved on{" "}
+                      {new Date(apiKeyStatus.createdAt).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -308,13 +344,16 @@ export function AiSettingsContent() {
                     </Button>
                   </div>
                 </div>
-                <Button onClick={handleSaveApiKey} disabled={!newApiKey.trim()}>
+                <Button
+                  onClick={handleSaveApiKey}
+                  disabled={!newApiKey.trim() || isSaving}
+                >
                   <Key className="h-4 w-4 mr-2" />
-                  Save API Key
+                  {isSaving ? "Saving..." : "Save API Key"}
                 </Button>
                 <div className="text-sm text-muted-foreground">
-                  Your API key will be stored securely in your browser's local
-                  storage.
+                  Your API key will be encrypted and stored securely on our
+                  servers.
                 </div>
               </div>
             )}

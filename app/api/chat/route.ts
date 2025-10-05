@@ -1,8 +1,9 @@
 import { JournalMessage } from "@/app/chat/page";
+import { getUserApiKey } from "@/lib/api-key-service";
 import { db } from "@/lib/db";
 import { userQuestions } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText } from "ai";
 import { and, asc, eq } from "drizzle-orm";
 
@@ -99,15 +100,27 @@ export async function POST(req: Request) {
   });
 
   // Unified model configuration - easily extensible for future providers
-  const getModel = (provider: string) => {
+  const getModel = async (provider: string) => {
     console.log("[Chat API] Getting model for provider:", provider);
     switch (provider) {
       case "openai":
-        if (!process.env.OPENAI_API_KEY) {
-          console.error("[Chat API] OpenAI API key not configured");
-          throw new Error("OpenAI API key not configured");
+        // Recupera e valida la chiave API dell'utente
+        const apiKeyResult = await getUserApiKey();
+        if (!apiKeyResult.isValid) {
+          console.error(
+            "[Chat API] API key validation failed:",
+            apiKeyResult.error
+          );
+          throw new Error(apiKeyResult.error || "API key validation failed");
         }
-        console.log("[Chat API] Using OpenAI model: gpt-4o-mini");
+
+        console.log(
+          "[Chat API] Using OpenAI model: gpt-4o-mini with user's API key"
+        );
+
+        const openai = createOpenAI({
+          apiKey: apiKeyResult.apiKey,
+        });
         return openai("gpt-4o-mini");
 
       // Future providers can be added here:
@@ -136,7 +149,7 @@ Guidelines:
 - Show genuine interest in their wellbeing`;
 
   try {
-    const model = getModel(modelProvider);
+    const model = await getModel(modelProvider);
 
     console.log("[Chat API] Starting streamText generation");
     const result = streamText({
@@ -151,6 +164,22 @@ Guidelines:
     return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error("[Chat API] Model configuration error:", error);
+
+    // Gestione specifica degli errori di API key
+    if (error instanceof Error && error.message.includes("API key")) {
+      return new Response(
+        JSON.stringify({
+          error: "API key error",
+          message: error.message,
+          code: "API_KEY_ERROR",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     return new Response(
       `Model configuration error: ${
         error instanceof Error ? error.message : "Unknown error"
